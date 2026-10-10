@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+**/data/raw/
+*.pkl
+_archive_toolkit_v1/
+.DS_Store

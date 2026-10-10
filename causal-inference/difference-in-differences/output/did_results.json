@@ -1,0 +1,19 @@
+{
+ "true_effect": 5.0,
+ "means": {
+  "A_pre": 61.59,
+  "A_post": 68.83,
+  "B_pre": 64.34,
+  "B_post": 67.07
+ },
+ "did_2x2": 4.51,
+ "did_reg": 4.51,
+ "did_se": 0.68,
+ "did_ci": [
+  3.18,
+  5.84
+ ],
+ "did_p": 9.567889665974182e-11,
+ "placebo_effect": 0.27,
+ "placebo_p": 0.795
+}

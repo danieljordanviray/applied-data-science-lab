@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brick 1 — Confidence intervals and the two-tailed t-test</title>
+<style>
+body { font-family: -apple-system, Georgia, serif; max-width: 720px; margin: 0 auto;
+       padding: 24px 18px; line-height: 1.7; color: #1a1a1a; }
+h1 { font-size: 1.6em; } h2 { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+.proveit { background: #eef7ee; border-left: 4px solid #2a7d2a; padding: 12px 16px; margin: 1em 0; }
+.exercise { background: #fff8e6; border-left: 4px solid #d9a400; padding: 12px 16px; margin: 1em 0; }
+table { border-collapse: collapse; font-size: 0.85em; margin: 1em 0; }
+th, td { border: 1px solid #ccc; padding: 5px 10px; text-align: left; }
+th { background: #f0f0f0; }
+.small { color: #555; font-size: 0.9em; }
+code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+.answer { color: #888; }
+</style></head><body>
+
+<h1>Brick 1: Confidence intervals and the two-tailed t-test</h1>
+<p class="small">Bio-ML Library · applied statistics, slowly · CDC NHANES 2017–2018, cleaned</p>
+
+<h2>The data (clean — cleaning is out of scope here)</h2>
+<p>5,178 adults. Three columns, nothing else:</p>
+<ul>
+<li><code>sex</code> — male or female</li>
+<li><code>bmi</code> — body mass index, kg/m²</li>
+<li><code>sbp</code> — average systolic blood pressure, mmHg</li>
+</ul>
+<p class="small">I pulled this from the raw NHANES files and cleaned it: complete cases only,
+implausible values removed. That whole job is a separate skill and stays out of this brick.</p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>sex</th>
+      <th>bmi</th>
+      <th>sbp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>female</td>
+      <td>31.7</td>
+      <td>200.0</td>
+    </tr>
+    <tr>
+      <td>male</td>
+      <td>21.5</td>
+      <td>111.3</td>
+    </tr>
+    <tr>
+      <td>female</td>
+      <td>23.7</td>
+      <td>142.0</td>
+    </tr>
+    <tr>
+      <td>female</td>
+      <td>38.9</td>
+      <td>118.7</td>
+    </tr>
+    <tr>
+      <td>male</td>
+      <td>21.3</td>
+      <td>101.3</td>
+    </tr>
+    <tr>
+      <td>male</td>
+      <td>19.7</td>
+      <td>113.3</td>
+    </tr>
+    <tr>
+      <td>male</td>
+      <td>23.5</td>
+      <td>104.7</td>
+    </tr>
+    <tr>
+      <td>female</td>
+      <td>39.9</td>
+      <td>162.0</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Concept 1: The confidence interval</h2>
+<p><b>The intuition.</b> We measured 5,178 people and got an average BMI of 29.66. But
+that's just our sample — the <i>true</i> average across all US adults is some nearby
+number we can't see directly. A 95% confidence interval is a net we cast around our
+sample average: <b>(29.46, 29.86)</b>. Read it as: "we're 95% confident the true average
+BMI is in here."</p>
+<p><b>How it's built.</b> Take the sample average, then go out a few <i>standard
+errors</i> in each direction. The standard error is the wiggle in our average:
+<code>s / √n</code>. More people → smaller wiggle → tighter net. The "few" is 1.96-ish
+(from the t-distribution; with 5,178 people it's basically 1.96).</p>
+<p><b>What it is not.</b> It is not "95% of people are in this range" — it's about the
+<i>average</i>, not individuals. And 95% confidence is a property of the method, not a
+probability about this specific interval.</p>
+<div class="proveit"><b>Prove it.</b> Take five BMIs — 22.1, 24.3, 21.8, 25.0, 23.2 —
+and do the arithmetic by hand: average 23.28, standard error, times 2.776 from a
+t-table. You get (21.57, 24.99). My <code>mean_ci</code> function gives (21.57, 24.99).
+scipy gives (21.57, 24.99). Three independent paths, same net. The machinery is sound.</div>
+
+<h2>Concept 2: The two-tailed t-test</h2>
+<p><b>The question.</b> Do men and women have different average BMIs? Not "who's
+higher" — just <i>different</i>. That's what two-tailed means: we test for a difference
+in either direction.</p>
+<p><b>The setup.</b> H<sub>0</sub> (the null): the true averages are equal.
+H<sub>1</sub>: they differ. The t-statistic is signal over noise:
+<code>t = (mean_men − mean_women) / SE_of_the_difference</code>.
+Big t means the gap dwarfs the wiggle. The p-value then asks: if H<sub>0</sub> were
+true, how often would we see a |t| this big by pure luck?</p>
+<p><b>The run.</b> <code>two_sample_ttest(men_bmi, women_bmi)</code>:</p>
+<ul>
+<li>Difference (men − women): <b>−0.82</b> BMI points, 95% CI (−1.21, −0.42)</li>
+<li>t = −4.03, p = 0.0001 → reject H<sub>0</sub>. The averages differ.</li>
+<li>Cohen's d = −0.11 → the difference is <i>tiny</i>.</li>
+</ul>
+<p><b>The lesson inside the lesson.</b> p = 0.0001 screams "significant!" while d = −0.11
+whispers "but barely." With 5,178 people, even a trivial gap clears the significance
+bar. <b>Always report the effect size next to the p-value.</b> Significance answers
+"is there anything?"; the effect size answers "should I care?"</p>
+<div class="proveit"><b>Prove it.</b> (1) I generated two fake groups where I <i>planted</i>
+a true difference of exactly 5. The test recovered 5.11 with p ≈ 0 — it finds what I
+hid. (2) I generated two fake groups with <i>no</i> difference planted: p = 0.64, stays
+quiet — it doesn't cry wolf. (3) On the real BMI data, my function matches
+scipy's <code>ttest_ind</code> to the last decimal. The method passed its exam before
+touching real data.</div>
+
+<h2>The checklist (what we're checking for, every time)</h2>
+<ol>
+<li>State the question, H<sub>0</sub>, and whether it's two-tailed.</li>
+<li>Check the basics: independent observations, n large enough (or roughly symmetric data).</li>
+<li>Compute: difference, t, p — plus the confidence interval of the difference.</li>
+<li>Compute the effect size (Cohen's d).</li>
+<li>Conclude in one plain-English sentence with <i>both</i> numbers: "yes it differs (p = …), but the gap is tiny (d = …)."</li>
+</ol>
+
+<div class="exercise"><b>Your turn.</b> Run the same recipe on <code>sbp</code> by sex:
+<code>two_sample_ttest(men_sbp, women_sbp)</code>. Is the difference significant? Should you care?
+<p class="answer">Answer: diff = +2.0 mmHg, 95% CI (0.92, 3.08), p = 0.0003 → significant;
+d = 0.10 → tiny. Same moral as BMI.</p></div>
+
+<h2>Code bank</h2>
+<p>New brick in <code>toolkit/stats_basics.py</code>:</p>
+<ul>
+<li><code>mean_ci(x)</code> — n, mean, standard error, 95% CI. Verified against hand arithmetic and scipy.</li>
+<li><code>two_sample_ttest(a, b)</code> — the full checklist in one call: difference, t, df, p, CI of the difference, Cohen's d, and the reject/don't-reject verdict. Verified on planted-answer simulations and identical to scipy on real data.</li>
+</ul>
+
+<h2>What's next</h2>
+<p>Brick 1 is yours to review. When it feels solid, you pick Brick 2's question —
+candidates: one-tailed vs two-tailed (when is "bigger" the right question?), the paired
+t-test (before/after on the same people), or statistical power (how many people do you
+need to find a real difference?).</p>
+
+<p class="small">Data: CDC NHANES 2017–2018, public domain, cleaned to 5,178 complete rows.
+All verifications run in <code>scripts/verify_brick01.py</code> — every assert passes.</p>
+</body></html>
