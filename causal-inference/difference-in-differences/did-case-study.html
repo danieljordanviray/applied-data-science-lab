@@ -114,9 +114,11 @@ difference, about four and a half points, is our estimate of the program's effec
 The key judgment call is that the two states were moving in parallel before the
 program started, which we verified in the earlier years."</div>
 
-<h2>The code (candidate — not in the code bank yet)</h2>
-<p>Per your rule, the bank stays empty until you design it. This is the working code,
-shown for review:</p>
+<h2>The code (now in the code bank)</h2>
+<p>This study earned its place in the bank: the reusable pieces live in
+<code>toolkit/did.py</code> — <code>did_2x2</code>, <code>did_regression</code>,
+<code>placebo_did</code>, <code>plot_group_trends</code> — each verified to reproduce
+the numbers on this page. The working version is shown below:</p>
 <pre>import statsmodels.formula.api as smf
 
 # the 2x2 table of means
