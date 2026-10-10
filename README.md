@@ -7,14 +7,12 @@ and includes checks a human can verify. No trust-me statistics.
 
 ## Read the case studies
 
-Rendered as pages via GitHub Pages (see `docs/`):
+Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
 
-- **Causal inference → [difference-in-differences](causal-inference/difference-in-differences/)**
-  — the classic 2×2 and the staggered-timing version
-- **Stats & prob → [confidence-intervals-t-tests](stats-and-prob/confidence-intervals-t-tests/)**
-  — CIs and the two-tailed t-test, verified three ways
-- **Stats & prob → [biomarkers-hypertension](stats-and-prob/biomarkers-hypertension/)**
-  — advanced reference on real NHANES data
+- **Stats & Probability → [p-values-power-playground](stats-and-prob/p-values-power-playground/)**
+  — Statistical Significance, Visualized: an interactive p-value & power playground
+- **Causal Inference → [difference-in-differences](causal-inference/difference-in-differences/)**
+  — Difference-in-Differences, plus the staggered-timing version
 
 ## Layout
 

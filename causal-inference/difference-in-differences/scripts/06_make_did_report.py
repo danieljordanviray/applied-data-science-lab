@@ -23,7 +23,11 @@ img {{ max-width: 100%; height: auto; margin: 1em 0; }}
 code {{ background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }}
 pre {{ background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; }}
 .formal {{ color: #6a5acd; }}
+.topnav {{ font-size: .85rem; margin: 0 0 1.2em; }}
+.topnav a {{ color: #1f6feb; text-decoration: none; }}
 </style></head><body>
+<div class="topnav"><a href="../../docs/index.html">← Homepage</a></div>
+
 
 <h1>Case study: Difference-in-Differences — did the program work?</h1>
 <p class="small">Methods case study · synthetic data with a planted true effect of +5 points,
