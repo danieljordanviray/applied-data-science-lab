@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Statistical Significance, Visualized — an interactive p-value &amp; power playground</title>
+<style>
+  .topnav{background:#020617; padding:8px 0; font-size:.85rem;}
+  .topnav a{color:#93c5fd; text-decoration:none;}
+  .topnav a:hover{text-decoration:underline;}
+
+  :root{
+    --blue:#2563eb; --orange:#ea580c; --green:#16a34a; --red:#dc2626;
+    --ink:#1e293b; --muted:#64748b; --bg:#f8fafc; --card:#ffffff; --line:#e2e8f0;
+  }
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); margin:0; line-height:1.65;}
+  header{background:#0f172a; color:#fff; padding:30px 20px 26px;}
+  header .wrap h1{margin:0 0 6px; font-size:1.7rem; line-height:1.25;}
+  header .wrap p{margin:0; color:#cbd5e1; max-width:640px;}
+  .wrap{max-width:880px; margin:0 auto; padding:0 16px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:20px; margin:18px 0;}
+  .card h2{margin:0 0 10px; font-size:1.25rem;}
+  .card h3{margin:22px 0 8px; font-size:1.05rem;}
+  .step{border-left:4px solid var(--blue); padding:2px 0 2px 14px; margin:16px 0;}
+  .step h4{margin:0 0 4px; font-size:1rem;}
+  .step p{margin:6px 0; color:#334155;}
+  .formal{color:var(--muted);}
+  .try{margin-top:8px;}
+  .try button{font-size:.85rem; padding:6px 12px; margin:2px 6px 2px 0;}
+  button{cursor:pointer; border-radius:9px; border:1px solid var(--line);
+    background:#fff; padding:10px 18px; font-size:1rem;}
+  button.primary{background:var(--blue); color:#fff; border-color:var(--blue); font-weight:600;}
+  button.primary:active{transform:scale(.98);}
+  .controls{display:grid; gap:14px; margin:14px 0;}
+  .ctl label{display:flex; justify-content:space-between; font-weight:600; font-size:.95rem;}
+  .ctl .val{background:#eff6ff; color:#1d4ed8; border-radius:7px; padding:1px 10px;
+    font-variant-numeric:tabular-nums;}
+  .ctl input[type=range]{width:100%; margin-top:6px;}
+  .ctl .hint{font-size:.83rem; color:var(--muted); font-weight:400;}
+  .btnrow{display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 4px;}
+  canvas.chart{width:100%; display:block; background:#fff; border:1px solid var(--line);
+    border-radius:10px;}
+  .verdict{border-radius:10px; padding:12px 16px; margin-top:10px; font-size:.97rem;}
+  .verdict.sig{background:#f0fdf4; border:1px solid #bbf7d0;}
+  .verdict.notsig{background:#fef2f2; border:1px solid #fecaca;}
+  .powerbox{text-align:center; padding:14px 10px 6px;}
+  .powernum{font-size:3.2rem; font-weight:800; color:var(--blue);
+    font-variant-numeric:tabular-nums; line-height:1.1;}
+  .powercap{color:var(--muted); font-size:.95rem; max-width:560px; margin:0 auto;}
+  .proveit{background:#fffbeb; border:1px solid #fde68a; border-radius:10px;
+    padding:12px 16px; margin-top:14px; font-size:.93rem;}
+  .proveit strong{color:#92400e;}
+  .legend{display:flex; gap:18px; font-size:.88rem; color:var(--muted); margin:6px 2px;}
+  .swatch{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px;}
+  footer{color:var(--muted); font-size:.85rem; padding:8px 0 34px;}
+</style>
+</head>
+<body>
+<div class="topnav"><div class="wrap"><a href="../../docs/index.html">← Homepage</a></div></div>
+
+<header>
+  <div class="wrap">
+    <h1>Statistical Significance, Visualized</h1>
+    <p>What does <em>"statistically significant"</em> actually mean? Move the sliders,
+    run experiments, and watch what luck does to results — with your own eyes.
+    No math degree required.</p>
+  </div>
+</header>
+<div class="wrap">
+  <div class="card">
+    <h2>Quick start</h2>
+    <p style="margin:6px 0">🌱 Move the sliders, then hit <strong>Run many experiments</strong>. Everything updates live.</p>
+    <p style="margin:6px 0">📖 New to all of this? The tutorial below explains each idea in about 30 seconds, with almost no jargon.</p>
+    <p style="margin:6px 0">🔍 Stuck on a word? Formal terms appear in <span class="formal">[brackets]</span> the first time they show up, right after their plain-English meaning.</p>
+  </div>
+  <div class="card">
+    <h2>The tutorial — statistics from zero</h2>
+    <div class="step">
+      <h4>1. The question every experiment asks</h4>
+      <p>A farmer gives 40 plants the old fertilizer and 40 plants a new one. The new-fertilizer
+      plants grew <strong>2&nbsp;cm taller on average</strong>. Did the fertilizer really work —
+      or did those 40 plants just get lucky? That question, <em>real effect or just luck?</em>,
+      is what this whole page is about. Luck has a formal name: <span class="formal">[sampling variability]</span> —
+      the fact that every new sample comes out a little different.</p>
+      <div class="try">Try this:
+        <button data-act="one">Run one experiment</button>
+        <span class="formal">Press it a few times. Watch the verdict flip even though the truth never changed.</span>
+      </div>
+    </div>
+    <div class="step">
+      <h4>2. The truth — which real life hides from you</h4>
+      <p>In real life you never get to see the true effect. Here, <strong>you</strong> set it with the
+      <em>True effect</em> slider. The blue curve is ordinary plants; the orange curve is fertilized
+      plants. Slide the effect to 0 and the curves sit exactly on top of each other — the fertilizer
+      does nothing. Scientists call the true difference the <span class="formal">[effect size]</span>.</p>
+      <div class="try">Try this:
+        <button data-act="set" data-k="effect" data-v="0">Set true effect to 0</button>
+        <button data-act="set" data-k="effect" data-v="6">Set true effect to 6</button>
+      </div>
+    </div>
+    <div class="step">
+      <h4>3. Why one experiment can lie</h4>
+      <p>Plants differ from each other — some are just vigorous. That plant-to-plant spread is the
+      <em>Noise</em> slider <span class="formal">[standard deviation]</span>. Because of it, every experiment
+      draws a slightly different sample, and the measured difference <strong>wobbles around the truth</strong>.
+      Small samples wobble violently; big samples barely wobble. That wobble is why single experiments mislead.</p>
+      <div class="try">Try this:
+        <button data-act="set" data-k="n" data-v="8">Tiny experiment: 8 plants per group</button>
+      </div>
+    </div>
+    <div class="step">
+      <h4>4. The p-value, in plain words</h4>
+      <p>The <span class="formal">[p-value]</span> answers exactly one question:
+      <strong><em>if the fertilizer did nothing, how surprising would my result be?</em></strong>
+      p&nbsp;=&nbsp;0.03 means: if the fertilizer really did nothing, you'd still see a result at least this surprising —
+      in either direction — about 3% of the time, just by luck. Small p → very surprising → we declare the result
+      <strong>significant</strong> <span class="formal">[statistical significance]</span>. The usual cutoff is 0.05.</p>
+      <p>⚠️ The classic trap: p is <strong>not</strong> "the chance the fertilizer works."
+      It's "the chance of a result this surprising <em>if</em> nothing were going on."</p>
+    </div>
+    <div class="step">
+      <h4>5. The 5% tax on crying wolf</h4>
+      <p>Set the true effect to 0 — the fertilizer does nothing — and run 1,000 experiments.
+      About <strong>5% still flash "significant!"</strong> That's the built-in price of the 0.05 rule:
+      even when nothing is real, 5% of experiments cry wolf
+      <span class="formal">[Type I error / false positive]</span>. Don't take this page's word for it —
+      the prove-it box in the lab lets you check.</p>
+      <div class="try">Try this:
+        <button data-act="set" data-k="effect" data-v="0">Effect = 0, then run many experiments</button>
+      </div>
+    </div>
+    <div class="step">
+      <h4>6. Power — catching what's real</h4>
+      <p><span class="formal">[Statistical power]</span> asks the opposite question: <strong>when the effect
+      is real, what percentage of experiments actually detect it?</strong> Slide <em>Plants per group</em>
+      up and watch power climb. The painful lesson: small sample + small effect = you'll miss a real
+      effect most of the time. That's why underpowered studies fail — not because the idea was wrong,
+      but because the net had holes.</p>
+      <div class="try">Try this:
+        <button data-act="set" data-k="n" data-v="150">Big experiment: 150 plants per group</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>🔬 The lab</h2>
+    <div class="controls">
+      <div class="ctl">
+        <label>True effect (fertilizer's real boost) <span class="val" id="v-effect"></span></label>
+        <input type="range" id="s-effect" min="0" max="10" step="0.5" value="3">
+        <div class="hint">Hidden in real life — here, you control it. In cm of plant height.</div>
+      </div>
+      <div class="ctl">
+        <label>Noise (plant-to-plant differences) <span class="val" id="v-sd"></span></label>
+        <input type="range" id="s-sd" min="2" max="14" step="0.5" value="8">
+        <div class="hint">Bigger noise = harder to spot the effect. In cm.</div>
+      </div>
+      <div class="ctl">
+        <label>Plants per group <span class="val" id="v-n"></span></label>
+        <input type="range" id="s-n" min="5" max="200" step="1" value="40">
+        <div class="hint">Your sample size. The single biggest lever you control.</div>
+      </div>
+      <div class="ctl">
+        <label>Experiments to simulate <span class="val" id="v-sims"></span></label>
+        <input type="range" id="s-sims" min="100" max="2000" step="100" value="500">
+        <div class="hint">How many imaginary re-runs of your experiment.</div>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="primary" id="b-one">Run one experiment</button>
+      <button class="primary" id="b-many">Run many experiments</button>
+    </div>
+    <h3>The truth (hidden in real life)</h3>
+    <div class="legend">
+      <span><span class="swatch" style="background:#2563eb"></span>Old fertilizer (true pattern)</span>
+      <span><span class="swatch" style="background:#ea580c"></span>New fertilizer (true pattern)</span>
+    </div>
+    <canvas class="chart" id="c-truth"></canvas>
+    <h3>One experiment</h3>
+    <div class="legend">
+      <span><span class="swatch" style="background:#2563eb"></span>Old fertilizer (your sample)</span>
+      <span><span class="swatch" style="background:#ea580c"></span>New fertilizer (your sample)</span>
+    </div>
+    <canvas class="chart" id="c-one"></canvas>
+    <div class="verdict notsig" id="one-verdict">Press <strong>Run one experiment</strong> to draw a sample.</div>
+    <h3>Many experiments <span class="formal">[Monte Carlo]</span></h3>
+    <p style="font-size:.93rem; color:var(--muted); margin:4px 0 8px">
+      We re-run your exact experiment hundreds of times and collect every p-value.
+      Green bars are the ones that came out "significant" (p&nbsp;&lt;&nbsp;0.05).</p>
+    <canvas class="chart" id="c-pvals"></canvas>
+    <div class="powerbox">
+      <div class="powernum" id="power-num">—</div>
+      <p class="powercap" id="power-cap">Press <strong>Run many experiments</strong>.</p>
+    </div>
+    <div class="proveit">
+      <strong>🔎 Prove-it box — don't trust this page on faith.</strong>
+      <div id="prove-live" style="margin-top:6px"></div>
+      <div style="margin-top:6px">Two self-checks you can run right now:
+      (1) set <em>True effect = 0</em> and run 1,000 experiments — the "significant" rate should sit near
+      <strong>5%</strong>, exactly what the 0.05 rule predicts;
+      (2) set <em>True effect = 4, Noise = 8, Plants = 64</em> — power should land near
+      <strong>80%</strong>, the textbook rule of thumb. If either number were way off, this page would be broken.</div>
+    </div>
+  </div>
+  <footer class="wrap">
+    <p>Built as a learning toy. Under the hood: Welch's two-sample t-test [the standard test for comparing two group averages], p-values computed from the
+    t-distribution [the curve t-statistics follow when nothing is going on], and all randomness simulated live in your browser — no servers, no tracking.</p>
+  </footer>
+</div>
+<script>
+(function (global) {
+  'use strict';
+  function randn(rng) {
+    let u = 0, v = 0;
+    while (u === 0) u = rng();
+    while (v === 0) v = rng();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function lgamma(x) {
+    const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+      771.32342877765313, -176.61502916214059, 12.507343278686905,
+      -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - lgamma(1 - x);
+    x -= 1;
+    let a = c[0];
+    for (let i = 1; i < 9; i++) a += c[i] / (x + i);
+    const t = x + 7.5;
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  }
+  function betacf(a, b, x) {
+    const MAXIT = 200, EPS = 3e-7, FPMIN = 1e-30;
+    const qab = a + b, qap = a + 1, qam = a - 1;
+    let c = 1, d = 1 - (qab * x) / qap;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    d = 1 / d;
+    let h = d;
+    for (let m = 1; m <= MAXIT; m++) {
+      const m2 = 2 * m;
+      let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+      d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+      c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+      d = 1 / d; h *= d * c;
+      aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+      d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+      c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+      d = 1 / d;
+      const del = d * c; h *= del;
+      if (Math.abs(del - 1) < EPS) break;
+    }
+    return h;
+  }
+  function betai(a, b, x) {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) +
+      a * Math.log(x) + b * Math.log(1 - x));
+    if (x < (a + 1) / (a + b + 2)) return (bt * betacf(a, b, x)) / a;
+    return 1 - (bt * betacf(b, a, 1 - x)) / b;
+  }
+  function tPvalue(t, v) {
+    if (!(v > 0) || !isFinite(t)) return NaN;
+    if (t === 0) return 1;
+    return betai(v / 2, 0.5, v / (v + t * t));
+  }
+  function welchT(a, b) {
+    const n1 = a.length, n2 = b.length;
+    let m1 = 0, m2 = 0, i;
+    for (i = 0; i < n1; i++) m1 += a[i];
+    for (i = 0; i < n2; i++) m2 += b[i];
+    m1 /= n1; m2 /= n2;
+    let s1 = 0, s2 = 0;
+    for (i = 0; i < n1; i++) s1 += (a[i] - m1) * (a[i] - m1);
+    for (i = 0; i < n2; i++) s2 += (b[i] - m2) * (b[i] - m2);
+    const v1 = s1 / (n1 - 1), v2 = s2 / (n2 - 1);
+    const se = Math.sqrt(v1 / n1 + v2 / n2);
+    const t = (m1 - m2) / se;
+    const df = Math.pow(v1 / n1 + v2 / n2, 2) /
+      (Math.pow(v1 / n1, 2) / (n1 - 1) + Math.pow(v2 / n2, 2) / (n2 - 1));
+    return { t: t, df: df, p: tPvalue(Math.abs(t), df) };
+  }
+  global.StatsCore = { randn: randn, tPvalue: tPvalue, welchT: welchT };
+})(this);
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const CTRL_MEAN = 50;
+  const state = { effect: 3, sd: 8, n: 40, sims: 500 };
+  const sliders = { effect: $('s-effect'), sd: $('s-sd'), n: $('s-n'), sims: $('s-sims') };
+  const labels  = { effect: $('v-effect'), sd: $('v-sd'), n: $('v-n'), sims: $('v-sims') };
+  const units   = { effect: ' cm', sd: ' cm', n: '', sims: '' };
+  function readSliders() {
+    for (const k of Object.keys(sliders)) {
+      state[k] = parseFloat(sliders[k].value);
+      labels[k].textContent = sliders[k].value + units[k];
+    }
+  }
+  function setupCanvas(id, h) {
+    const cv = $(id);
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth;
+    cv.width = Math.max(1, w * dpr);
+    cv.height = h * dpr;
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    return { ctx: ctx, w: w, h: h };
+  }
+  function normalPdf(x, mu, sd) {
+    const z = (x - mu) / sd;
+    return Math.exp(-0.5 * z * z) / (sd * Math.sqrt(2 * Math.PI));
+  }
+  function sample(n, mu, sd) {
+    const a = new Array(n);
+    for (let i = 0; i < n; i++) a[i] = mu + sd * StatsCore.randn(Math.random);
+    return a;
+  }
+  function fmtP(p) {
+    if (!isFinite(p)) return '—';
+    if (p < 0.001) return '< 0.001';
+    return p.toFixed(3);
+  }
+  function drawTruth() {
+    const r = setupCanvas('c-truth', 210), ctx = r.ctx, w = r.w, h = r.h;
+    const pad = { l: 12, r: 12, t: 14, b: 26 };
+    const x0 = 20, x1 = 80;
+    const muA = CTRL_MEAN, muB = CTRL_MEAN + state.effect, sd = state.sd;
+    let ymax = 0;
+    for (let x = x0; x <= x1; x += 0.5) {
+      ymax = Math.max(ymax, normalPdf(x, muA, sd), normalPdf(x, muB, sd));
+    }
+    ymax *= 1.12;
+    const X = x => pad.l + ((x - x0) / (x1 - x0)) * (w - pad.l - pad.r);
+    const Y = y => h - pad.b - (y / ymax) * (h - pad.t - pad.b);
+    ctx.strokeStyle = '#e2e8f0'; ctx.fillStyle = '#64748b';
+    ctx.font = '11px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 1;
+    for (let x = 20; x <= 80; x += 10) {
+      ctx.beginPath(); ctx.moveTo(X(x), pad.t); ctx.lineTo(X(x), h - pad.b); ctx.stroke();
+      ctx.fillText(x + ' cm', X(x), h - 8);
+    }
+    function curve(mu, color, fill) {
+      ctx.beginPath();
+      for (let x = x0; x <= x1; x += 0.4) {
+        const px = X(x), py = Y(normalPdf(x, mu, sd));
+        if (x === x0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.lineTo(X(x1), Y(0)); ctx.lineTo(X(x0), Y(0)); ctx.closePath();
+      ctx.fillStyle = fill; ctx.fill();
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(X(mu), pad.t); ctx.lineTo(X(mu), Y(0));
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    curve(muA, '#2563eb', 'rgba(37,99,235,0.10)');
+    curve(muB, '#ea580c', 'rgba(234,88,12,0.10)');
+    ctx.fillStyle = '#1e293b'; ctx.font = '600 12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('true difference = ' + state.effect + ' cm', w / 2, 14);
+  }
+  function histogram(data, x0, x1, bins) {
+    const counts = new Array(bins).fill(0);
+    for (const v of data) {
+      let b = Math.floor(((v - x0) / (x1 - x0)) * bins);
+      if (b < 0) b = 0; if (b >= bins) b = bins - 1;
+      counts[b]++;
+    }
+    return counts;
+  }
+  function oneExperiment() {
+    const a = sample(state.n, CTRL_MEAN, state.sd);
+    const b = sample(state.n, CTRL_MEAN + state.effect, state.sd);
+    const res = StatsCore.welchT(a, b);
+    const obsDiff = (b.reduce((s, v) => s + v, 0) / b.length) -
+                    (a.reduce((s, v) => s + v, 0) / a.length);
+    const r = setupCanvas('c-one', 230), ctx = r.ctx, w = r.w, h = r.h;
+    const pad = { l: 12, r: 12, t: 12, b: 26 };
+    const all = a.concat(b);
+    let x0 = Math.min.apply(null, all), x1 = Math.max.apply(null, all);
+    const span = Math.max(4, x1 - x0);
+    const mid = (x0 + x1) / 2;
+    x0 = mid - span * 0.62; x1 = mid + span * 0.62;
+    const bins = 14;
+    const ca = histogram(a, x0, x1, bins), cb = histogram(b, x0, x1, bins);
+    const cmax = Math.max.apply(null, ca.concat(cb)) || 1;
+    const X = i => pad.l + (i / bins) * (w - pad.l - pad.r);
+    const bw = (w - pad.l - pad.r) / bins;
+    const Y = c => h - pad.b - (c / cmax) * (h - pad.t - pad.b);
+    function bars(counts, color) {
+      ctx.fillStyle = color;
+      for (let i = 0; i < bins; i++) {
+        if (!counts[i]) continue;
+        ctx.fillRect(X(i) + 1, Y(counts[i]), bw - 2, h - pad.b - Y(counts[i]));
+      }
+    }
+    bars(ca, 'rgba(37,99,235,0.55)');
+    bars(cb, 'rgba(234,88,12,0.55)');
+    ctx.fillStyle = '#64748b'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(x0.toFixed(0) + ' cm', pad.l + 24, h - 8);
+    ctx.fillText(x1.toFixed(0) + ' cm', w - pad.r - 24, h - 8);
+    const box = $('one-verdict');
+    const sig = res.p < 0.05;
+    box.className = 'verdict ' + (sig ? 'sig' : 'notsig');
+    box.innerHTML =
+      '<strong>' + (sig ? '✅ Significant!' : '❌ Not significant.') + '</strong> ' +
+      'Observed difference: <strong>' + obsDiff.toFixed(1) + ' cm</strong>' +
+      ' (truth: ' + state.effect + ' cm) &nbsp;·&nbsp; p = <strong>' + fmtP(res.p) + '</strong><br>' +
+      '<span style="color:#475569">' + (sig
+        ? 'The test says this difference is too big to wave away as luck.'
+        : 'The test can\u2019t tell — a difference this big could easily be luck.') + '</span>';
+  }
+  function monteCarlo() {
+    const sims = Math.round(state.sims);
+    const pvals = new Float64Array(sims);
+    let sig = 0;
+    for (let i = 0; i < sims; i++) {
+      const a = sample(state.n, CTRL_MEAN, state.sd);
+      const b = sample(state.n, CTRL_MEAN + state.effect, state.sd);
+      const p = StatsCore.welchT(a, b).p;
+      pvals[i] = p;
+      if (p < 0.05) sig++;
+    }
+    const r = setupCanvas('c-pvals', 220), ctx = r.ctx, w = r.w, h = r.h;
+    const pad = { l: 12, r: 12, t: 12, b: 30 };
+    const bins = 20;
+    const counts = new Array(bins).fill(0);
+    for (let i = 0; i < sims; i++) {
+      let bb = Math.floor(pvals[i] * bins);
+      if (bb >= bins) bb = bins - 1;
+      counts[bb]++;
+    }
+    const cmax = Math.max.apply(null, counts) || 1;
+    const bw = (w - pad.l - pad.r) / bins;
+    const Y = c => h - pad.b - (c / cmax) * (h - pad.t - pad.b);
+    for (let i = 0; i < bins; i++) {
+      const lo = i / bins;
+      ctx.fillStyle = lo < 0.05 ? 'rgba(22,163,74,0.75)' : 'rgba(100,116,139,0.55)';
+      const x = pad.l + i * bw;
+      if (counts[i]) ctx.fillRect(x + 1, Y(counts[i]), bw - 2, h - pad.b - Y(counts[i]));
+    }
+    const cx = pad.l + 0.05 * (w - pad.l - pad.r);
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, h - pad.b);
+    ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#16a34a'; ctx.font = '600 11px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText('0.05 cutoff', cx + 6, pad.t + 12);
+    ctx.fillStyle = '#64748b'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('p = 0', pad.l + 18, h - 10);
+    ctx.fillText('p = 1', w - pad.r - 18, h - 10);
+    ctx.fillText('p-value →', w / 2, h - 10);
+    const rate = sig / sims;
+    const pct = (rate * 100).toFixed(1) + '%';
+    $('power-num').textContent = pct;
+    const cap = $('power-cap');
+    if (state.effect === 0) {
+      cap.innerHTML = 'True effect is <strong>0</strong> — the fertilizer does nothing. ' +
+        'Yet <strong>' + sig + ' out of ' + sims + '</strong> experiments cried "significant!" ' +
+        'That\u2019s the 5% false-positive price of the 0.05 rule. ' +
+        '<span class="formal">[Type I error]</span>';
+    } else {
+      cap.innerHTML = 'Out of <strong>' + sims + '</strong> experiments, <strong>' + sig +
+        '</strong> detected the real effect of ' + state.effect + ' cm. ' +
+        'That detection rate is the <span class="formal">[statistical power]</span>.';
+    }
+    $('prove-live').innerHTML = 'Right now: true effect = <strong>' + state.effect +
+      ' cm</strong>, plants = <strong>' + state.n + '</strong> per group → ' +
+      '<strong>' + pct + '</strong> of ' + sims + ' experiments came out significant.';
+  }
+  let mcTimer = null;
+  function scheduleMC() {
+    if (mcTimer) clearTimeout(mcTimer);
+    mcTimer = setTimeout(monteCarlo, 250);
+  }
+  for (const k of Object.keys(sliders)) {
+    sliders[k].addEventListener('input', () => {
+      readSliders();
+      drawTruth();
+      scheduleMC();
+    });
+  }
+  $('b-one').addEventListener('click', oneExperiment);
+  $('b-many').addEventListener('click', monteCarlo);
+  document.querySelectorAll('button[data-act]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const act = btn.getAttribute('data-act');
+      if (act === 'one') { oneExperiment(); }
+      else if (act === 'set') {
+        const k = btn.getAttribute('data-k');
+        sliders[k].value = btn.getAttribute('data-v');
+        readSliders(); drawTruth(); monteCarlo();
+      }
+      $('c-truth').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+  let rsTimer = null;
+  window.addEventListener('resize', () => {
+    if (rsTimer) clearTimeout(rsTimer);
+    rsTimer = setTimeout(() => { drawTruth(); }, 200);
+  });
+  readSliders();
+  drawTruth();
+  oneExperiment();
+  monteCarlo();
+})();
+</script>
+</body>
+</html>
