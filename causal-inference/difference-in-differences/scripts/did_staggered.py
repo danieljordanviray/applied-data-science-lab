@@ -1,163 +1,137 @@
-"""Staggered DiD case study: treatment arrives at different times.
+"""Staggered DiD case study, gentle version.
 
-Story: a retail chain rolls out a new staff-scheduling system store by store.
-  - 15 stores adopt Mar 2022 (true effect +8), 15 May 2022 (+6),
-    15 Jul 2022 (+4), 15 Sep 2022 (+2). True overall ATT = 5.0 (planted).
-  - 40 stores never adopt (controls).
-  - Monthly sales ($k), Oct 2021 - Dec 2022.
+Story: 100 patients, weight-loss drug. Nobody designed an experiment — some
+patients started the drug in January, some in February, some in March, and
+40 never took it. We observe everyone's weight monthly. Did the drug work?
 
-SYNTHETIC with planted heterogeneous effects. Verifiable: we know the truth.
+SYNTHETIC with planted effects. Verifiable: we know the truth.
+  - Jan starters (20 patients): true effect -4.0 kg
+  - Feb starters (20 patients): true effect -3.0 kg
+  - Mar starters (20 patients): true effect -2.0 kg
+  - Never-treated (40 patients): controls
+  - True overall ATT = -3.0 kg (planted)
 
-Estimators compared:
-  1. Cohort DiDs vs never-treated, averaged [Callaway-Sant'Anna intuition].
-     The bank's did_2x2 is reused per cohort -- the flywheel in action.
+Estimators:
+  1. One honest DiD per start-month cohort vs never-treated [cohort-specific
+     DiD], then averaged [group-time aggregation / Callaway-Sant'Anna intuition].
+     Reuses the bank's did_2x2 per cohort.
   2. Naive pooled TWFE (one big regression) -- for comparison.
-  3. Naive TWFE event study (one big regression with lead/lag dummies).
-  4. Cohort event study: per-cohort DiD at each event month vs never-treated,
-     averaged. The honest event-study.
-
-Finding: (3) is contaminated even though the design is full-rank
-[Sun & Abraham 2021]; (1)/(4) recover the planted truth.
-New staggered machinery lives HERE for review, not in the bank.
+  3. Cohort event study: per-cohort DiD at each relative month vs never-treated,
+     averaged. Pre-launch estimates should hover near zero.
+  4. Placebo: fake-treated among the never-treated -> should find nothing.
 """
-import sys, json
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))  # repo root
-from pathlib import Path
+import sys
+import json
 import numpy as np
 import pandas as pd
+from pathlib import Path
+
+STUDY = Path(__file__).resolve().parent.parent  # this case study's folder
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))  # repo root
+from toolkit.did import did_2x2
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import statsmodels.api as sm
-from toolkit.did import did_2x2
 
-STUDY = Path(__file__).resolve().parent.parent  # this case study's folder
-OUT = STUDY / "output"; FIG = OUT / "figures"
+rng = np.random.default_rng(7)
 
-rng = np.random.default_rng(2026)
-MONTHS = pd.period_range("2021-10", "2022-12", freq="M")
-M = {str(m): i for i, m in enumerate(MONTHS)}
-COHORTS = {"2022-03": 8.0, "2022-05": 6.0, "2022-07": 4.0, "2022-09": 2.0}
-TRUE_ATT = float(np.mean(list(COHORTS.values())))
+COHORTS = {"jan": (4, -4.0, 20), "feb": (5, -3.0, 20), "mar": (6, -2.0, 20)}
+NEVER_N = 40
+MONTHS = np.arange(1, 10)  # Oct=1 ... Jun=9 ; Jan=4, Feb=5, Mar=6
+OUT = STUDY / "output"
+FIG = OUT / "figures"
+OUT.mkdir(exist_ok=True)
+FIG.mkdir(exist_ok=True)
 
 rows = []
-sid = 0
-for adopt, effect in COHORTS.items():
-    ai = M[adopt]
-    for s in range(15):
-        base = 100 + rng.normal(0, 8)
-        for mi, m in enumerate(MONTHS):
-            y = base + 0.8 * mi + rng.normal(0, 2.5) + (effect if mi >= ai else 0)
-            rows.append({"store": sid, "month": str(m), "mi": mi, "cohort": adopt,
-                         "adopt_mi": ai, "ever_treated": True,
-                         "treated_now": mi >= ai, "sales": y})
-        sid += 1
-for s in range(40):
-    base = 100 + rng.normal(0, 8)
-    for mi, m in enumerate(MONTHS):
-        y = base + 0.8 * mi + rng.normal(0, 2.5)
-        rows.append({"store": sid, "month": str(m), "mi": mi, "cohort": "never",
-                     "adopt_mi": np.nan, "ever_treated": False,
-                     "treated_now": False, "sales": y})
-    sid += 1
-df = pd.DataFrame(rows)
+pid = 0
+for name, (start, eff, n) in COHORTS.items():
+    for _ in range(n):
+        pid += 1
+        fe = rng.normal(0, 3)  # patient baseline differences
+        for t in MONTHS:
+            w = 88 + fe + 0.2 * t + (eff if t >= start else 0.0) + rng.normal(0, 0.7)
+            rows.append((pid, name, start, t, w))
+never_ids = []
+for _ in range(NEVER_N):
+    pid += 1
+    never_ids.append(pid)
+    fe = rng.normal(0, 3)
+    for t in MONTHS:
+        w = 88 + fe + 0.2 * t + rng.normal(0, 0.7)
+        rows.append((pid, "never", 0, t, w))
+df = pd.DataFrame(rows, columns=["patient", "cohort", "start", "month", "weight"])
 df.to_csv(STUDY / "data" / "did_staggered.csv", index=False)
 
-# ---- 1. Per-cohort DiD vs never-treated (bank's did_2x2, reused) ----
-def se_did(sub, tcol, pcol, y):
-    g = sub.groupby([tcol, pcol])[y]
-    v = g.var(ddof=1); n = g.count()
-    return float(np.sqrt((v / n).sum()))
+# 1. cohort DiDs vs never-treated -------------------------------------------
+cohort_est = {}
+for name, (start, eff, n) in COHORTS.items():
+    d = df[((df.cohort == name) | (df.cohort == "never"))].copy()
+    d["treated"] = (d.cohort == name)
+    d["post"] = (d.month >= start)
+    r = did_2x2(d, "treated", "post", "weight")
+    cohort_est[name] = {"estimate": r["estimate"], "truth": eff, "n": n}
+    print(f"cohort {name}: est {r['estimate']:.2f} vs truth {eff}")
 
-cohort_res = []
-for adopt, effect in COHORTS.items():
-    ai = M[adopt]
-    win = df[((df["cohort"] == adopt) | (df["cohort"] == "never")) &
-             (df["mi"] >= ai - 3) & (df["mi"] <= ai + 2)].copy()
-    win["post"] = win["mi"] >= ai
-    r = did_2x2(win, "ever_treated", "post", "sales")
-    cohort_res.append({"cohort": adopt, "n": 15, "true_effect": effect,
-                       "did": round(r["estimate"], 2),
-                       "se": round(se_did(win, "ever_treated", "post", "sales"), 2)})
-att = float(np.mean([c["did"] for c in cohort_res]))
-att_se = float(np.sqrt(np.mean([c["se"] ** 2 for c in cohort_res])) / 2)
+att = float(np.mean([cohort_est[k]["estimate"] for k in COHORTS]))
+print(f"ATT (avg of cohorts): {att:.2f} vs truth -3.00")
 
-# ---- 2. Naive pooled TWFE ----
-d = pd.get_dummies(df["store"], prefix="s", drop_first=True).astype(float)
-t = pd.get_dummies(df["mi"], prefix="m", drop_first=True).astype(float)
-X = pd.concat([d, t, df[["treated_now"]].astype(float)], axis=1)
-twfe = float(sm.OLS(df["sales"], sm.add_constant(X)).fit().params["treated_now"])
+# 2. naive pooled TWFE --------------------------------------------------------
+import statsmodels.formula.api as smf
+d = df.copy()
+d["treated_now"] = ((d.cohort != "never") & (d.month >= d.start)).astype(int)
+fit = smf.ols("weight ~ treated_now + C(patient) + C(month)", data=d).fit()
+twfe = float(fit.params["treated_now"])
+print(f"naive TWFE: {twfe:.2f} vs truth -3.00")
 
-# ---- 3. Naive TWFE event study (the cautionary tale) ----
-df["event"] = df["mi"] - df["adopt_mi"]
-ev = pd.DataFrame(index=df.index)
-for k in [-3, -2, 0, 1, 2, 3]:
-    ev[f"E{k}"] = (df["event"] == k).astype(float)
-fe = sm.OLS(df["sales"], sm.add_constant(pd.concat([d, t, ev], axis=1))).fit()
-twfe_event = {k: (float(fe.params[f"E{k}"]), float(fe.bse[f"E{k}"]))
-              for k in [-3, -2, 0, 1, 2, 3]}
+# 3. cohort event study -------------------------------------------------------
+ev = {-1: 0.0}  # reference month: zero by construction
+for k in [k for k in range(-3, 4) if k != -1]:
+    ests = []
+    for name, (start, eff, n) in COHORTS.items():
+        t1, t0 = start + k, start - 1
+        if t1 < 1 or t1 > 9:
+            continue
+        d = df[((df.cohort == name) | (df.cohort == "never"))
+               & (df.month.isin([t0, t1]))].copy()
+        d["treated"] = (d.cohort == name)
+        d["post"] = (d.month == t1)
+        ests.append(did_2x2(d, "treated", "post", "weight")["estimate"])
+    ev[k] = float(np.mean(ests))
+print("event study:", {k: round(v, 2) for k, v in ev.items()})
 
-# ---- 4. Honest cohort event study: per-cohort DiD at each event month ----
-event_res = {}
-for k in [-3, -2, 0, 1, 2, 3]:
-    ests, ses = [], []
-    for adopt in COHORTS:
-        ai = M[adopt]
-        win = df[((df["cohort"] == adopt) | (df["cohort"] == "never")) &
-                 (df["mi"].isin([ai - 1, ai + k]))].copy()
-        win["post"] = win["mi"] == ai + k
-        r = did_2x2(win, "ever_treated", "post", "sales")
-        ests.append(r["estimate"]); ses.append(se_did(win, "ever_treated", "post", "sales"))
-    event_res[k] = {"est": float(np.mean(ests)),
-                    "se": float(np.sqrt(np.mean(np.square(ses))) / 2)}
-event_res[-1] = {"est": 0.0, "se": 0.0}
+fig, ax = plt.subplots(figsize=(8, 4.5))
+ks = sorted(ev)
+ax.plot(ks, [ev[k] for k in ks], marker="o", color="#1f6feb")
+ax.axhline(0, color="gray", linestyle="--")
+ax.axvline(-0.5, color="gray", linestyle=":")
+ax.set(xlabel="Months since starting the drug (event time)",
+       ylabel="Estimated weight change (kg)",
+       title="Cohort event study: lined up by start month, vs never-treated")
+fig.tight_layout()
+fig.savefig(FIG / "did_event_cohort.png", dpi=110)
+plt.close(fig)
 
-def event_plot(data, path, title):
-    # data: {k: (est, se)}
-    ks = sorted(data)
-    fig, ax = plt.subplots(figsize=(7.5, 4.2))
-    ax.errorbar(ks, [data[k][0] for k in ks],
-                 yerr=[1.96 * data[k][1] for k in ks],
-                 fmt="o", capsize=4, color="#1f6feb")
-    ax.axhline(0, color="black", linewidth=1)
-    ax.axvline(-0.5, color="gray", linestyle="--", label="Adoption month")
-    ax.set_xlabel("Months since adoption (event time)")
-    ax.set_ylabel("Estimated effect on sales ($k)")
-    ax.set_title(title); ax.legend(); ax.grid(alpha=0.25)
-    fig.savefig(path); plt.close(fig)
-
-event_plot({k: (twfe_event[k][0], twfe_event[k][1]) for k in twfe_event},
-           FIG / "did_event_twfe.png", "Naive TWFE event study: phantom pre-trends, muted effects")
-event_plot({k: (event_res[k]["est"], event_res[k]["se"]) for k in event_res},
-           FIG / "did_event_cohort.png",
-           "Cohort event study: flat before, clean lift after")
-
-# ---- 5. Placebo: 30 repetitions of fake 4-cohort adoption among never-treated ----
-# Mirrors the real estimator exactly (4 cohorts x 5 stores -> aggregate).
-never_ids_all = df.loc[df["cohort"] == "never", "store"].unique()
-placebo_atts = []
+# 4. placebo: fake-treated among the never-treated ------------------------------
+placebos = []
 for rep in range(30):
-    r = np.random.default_rng(10_000 + rep)
-    fids = r.choice(never_ids_all, 20, replace=False).reshape(4, 5)
-    ctrl_ids = np.setdiff1d(never_ids_all, fids.ravel())
-    att_r = []
-    for ci, adopt in enumerate(COHORTS):
-        ai = M[adopt]
-        fstores = fids[ci]
-        win = df[((df["store"].isin(fstores)) | (df["store"].isin(ctrl_ids))) &
-                 (df["mi"] >= ai - 3) & (df["mi"] <= ai + 2)].copy()
-        win["post"] = win["mi"] >= ai
-        win["fake_t"] = win["store"].isin(fstores)
-        att_r.append(did_2x2(win, "fake_t", "post", "sales")["estimate"])
-    placebo_atts.append(float(np.mean(att_r)))
-placebo_est = float(np.mean(placebo_atts))
-placebo_se = float(np.std(placebo_atts, ddof=1) / np.sqrt(len(placebo_atts)))
+    fake = rng.choice(never_ids, 20, replace=False)
+    d = df[df.cohort == "never"].copy()
+    d["treated"] = d.patient.isin(fake)
+    d["post"] = (d.month >= 4)
+    placebos.append(did_2x2(d, "treated", "post", "weight")["estimate"])
+placebos = np.array(placebos)
+print(f"placebo: mean {placebos.mean():.2f}, sd {placebos.std():.2f} (truth 0)")
 
-results = {"true_att": TRUE_ATT, "cohort_dids": cohort_res,
-           "att_aggregated": round(att, 2), "att_se": round(att_se, 2),
-           "twfe_pooled": round(twfe, 2),
-           "twfe_event_study": {str(k): round(v[0], 2) for k, v in twfe_event.items()},
-           "cohort_event_study": {str(k): round(event_res[k]["est"], 2) for k in sorted(event_res)},
-           "placebo_effect": round(placebo_est, 2), "placebo_se": round(placebo_se, 2)}
-(OUT / "did_staggered_results.json").write_text(json.dumps(results, indent=1))
-print(json.dumps(results, indent=1))
+results = {
+    "cohort_est": {k: {"estimate": round(v["estimate"], 2), "truth": v["truth"], "n": v["n"]}
+                   for k, v in cohort_est.items()},
+    "att": round(att, 2), "att_truth": -3.0,
+    "twfe": round(twfe, 2),
+    "event_study": {str(k): round(v, 2) for k, v in ev.items()},
+    "placebo_mean": round(float(placebos.mean()), 2),
+    "placebo_sd": round(float(placebos.std()), 2),
+}
+with open(OUT / "did_staggered_results.json", "w") as f:
+    json.dump(results, f, indent=2)
+print("saved results + figure")

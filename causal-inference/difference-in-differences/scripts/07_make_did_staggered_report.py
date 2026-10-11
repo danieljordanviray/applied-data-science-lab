@@ -1,10 +1,16 @@
-"""Generate the staggered-DiD case-study report."""
+"""Generate the staggered-DiD case-study report (gentle version)."""
 import base64
+import json
 from pathlib import Path
 
 STUDY = Path(__file__).resolve().parent.parent  # this case study's folder
+
 def b64(n):
     return base64.b64encode((STUDY / "output" / "figures" / n).read_bytes()).decode()
+
+res = json.load(open(STUDY / "output" / "did_staggered_results.json"))
+ce = res["cohort_est"]
+ev = res["event_study"]
 
 html = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
@@ -17,6 +23,7 @@ h1 {{ font-size: 1.6em; }} h2 {{ margin-top: 2em; border-bottom: 1px solid #ddd;
 .boss {{ background: #eef4ff; border-left: 4px solid #1f6feb; padding: 12px 16px; margin: 1em 0; }}
 .answer {{ background: #f6f0ff; border-left: 4px solid #6a5acd; padding: 12px 16px; margin: 1em 0; }}
 .proveit {{ background: #eef7ee; border-left: 4px solid #2a7d2a; padding: 12px 16px; margin: 1em 0; }}
+.trap {{ background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; margin: 1em 0; }}
 table {{ border-collapse: collapse; font-size: 0.88em; margin: 1em 0; }}
 th, td {{ border: 1px solid #ccc; padding: 6px 12px; text-align: center; }}
 th {{ background: #f0f0f0; }}
@@ -28,140 +35,165 @@ pre {{ background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto;
 .topnav {{ font-size: .85rem; margin: 0 0 1.2em; }}
 .topnav a {{ color: #1f6feb; text-decoration: none; }}
 </style></head><body>
-<div class="topnav"><a href="../../docs/index.html">← Homepage</a></div>
+<div class="topnav"><a href="../../docs/index.html">\u2190 Homepage</a></div>
 
+<h1>Staggered Difference in Differences — when everyone starts at different times</h1>
+<p class="small">Methods case study · synthetic data, planted effects per start month
+(&minus;4 / &minus;3 / &minus;2 kg), true overall effect &minus;3.0 kg — the answer key
+exists, so everything is checkable. Assumes you know plain difference-in-differences.</p>
 
-<h1>Staggered Difference in Differences — when treatment arrives at different times</h1>
-<p class="small">Methods case study · synthetic data, planted effects per cohort (8 / 6 / 4 / 2),
-true overall effect 5.0 — the answer key exists, so everything is checkable.</p>
+<h2>The setup</h2>
+<p>100 patients. A weight-loss drug — but nobody designed an experiment. Some patients
+started it in <strong>January</strong>, some in <strong>February</strong>, some in
+<strong>March</strong>, and 40 never took it at all. We can see everyone's weight,
+every month. Question: <strong>did the drug work?</strong></p>
+<p>This is the situation observational data usually comes in: treatment happened,
+but on nobody's schedule but reality's.</p>
 
-<h2>The story</h2>
-<p>A retail chain rolls out a new staff-scheduling system store by store. Fifteen stores
-adopt in <b>March 2022</b>, fifteen in <b>May</b>, fifteen in <b>July</b>, fifteen in
-<b>September</b>. Forty stores never adopt. We track monthly sales, Oct 2021 – Dec 2022.
-Same question as last time — did it work? — but now there is no single "before" and
-"after." Every store has its own clock.</p>
+<h2>Why plain DiD gets confused</h2>
+<p>In the classic setup there's one "before" and one "after." Here, <em>"after"</em>
+means January for some patients, February for others, March for the rest. If you
+lump everyone together and compare "before vs after," you're averaging people whose
+treatment started months apart — and worse, at any given calendar month, some of
+your "control" patients already started the drug months ago. Their weight already
+reflects the treatment, so they stop being a clean stand-in for "what would have
+happened."</p>
 
-<h2>The new wrinkle: event time</h2>
-<p>Relabel each store's calendar around its own adoption month: adoption month becomes
-<b>month 0</b>, the three months before are <b>−3, −2, −1</b>, the three after are
-<b>+1, +2, +3</b> <span class="formal">[event time / relative time]</span>. A store
-adopting in March and a store adopting in September now line up on the same ruler, and
-"3 months pre, 3 months post" means the same thing for everyone. This relabeling is
-half the battle.</p>
+<h2>The fix, in one sentence</h2>
+<div class="answer">Line everyone up on <strong>"months since <em>they</em> started"</strong>
+instead of calendar month <span class="formal">[event time]</span>; do one small,
+honest DiD per start-month group against the never-treated patients
+<span class="formal">[cohort-specific DiD]</span>; then average the answers
+<span class="formal">[aggregation]</span>.</div>
+<p>That's the whole machinery. Everything below is just doing it carefully.</p>
 
-<div class="answer"><b>Your question, answered: what about the control group — they have
-no start date?</b><br>
-They don't need one. The never-treated stores lend their timeline to <i>every</i>
-cohort's comparison: the March cohort is compared against never-treated stores over
-March's calendar window, the September cohort against the same stores over September's
-window. In event time, the controls show up in every cohort's 2×2 table. A control
-group without a start date is a feature, not a problem — they're the universal
-yardstick.</div>
-
-<h2>The estimator: one DiD per cohort, then average</h2>
-<p>For each adoption wave, run the familiar 2×2 against the never-treated stores over
-that wave's own window — this reuses the code bank's <code>did_2x2</code> verbatim,
-the flywheel working — then average the four, weighted by cohort size
-<span class="formal">[group-time aggregation, Callaway &amp; Sant'Anna intuition]</span>:</p>
+<h2>By hand: 6 patients</h2>
+<p>Ana and Ben started in January. Cara and Dan started in February. Eli and Fay never
+took it. Weights in kg (Oct&ndash;Mar):</p>
 <table>
-<tr><th>Cohort</th><th>Planted truth</th><th>Recovered DiD</th></tr>
-<tr><td>Mar 2022</td><td>+8.0</td><td>+8.96</td></tr>
-<tr><td>May 2022</td><td>+6.0</td><td>+6.15</td></tr>
-<tr><td>Jul 2022</td><td>+4.0</td><td>+2.84</td></tr>
-<tr><td>Sep 2022</td><td>+2.0</td><td>+1.26</td></tr>
-<tr><th>Average (ATT)</th><th>5.0</th><th><b>4.8</b> (±1.1)</th></tr>
+<tr><th></th><th>Oct</th><th>Nov</th><th>Dec</th><th>Jan</th><th>Feb</th><th>Mar</th></tr>
+<tr><td>Ana (Jan)</td><td>90</td><td>90</td><td>90</td><td>87</td><td>87</td><td>87</td></tr>
+<tr><td>Ben (Jan)</td><td>92</td><td>92</td><td>92</td><td>89</td><td>89</td><td>89</td></tr>
+<tr><td>Cara (Feb)</td><td>90</td><td>90</td><td>90</td><td>90</td><td>88</td><td>88</td></tr>
+<tr><td>Dan (Feb)</td><td>91</td><td>91</td><td>91</td><td>91</td><td>89</td><td>89</td></tr>
+<tr><td>Eli (never)</td><td>90</td><td>90</td><td>90</td><td>90</td><td>90</td><td>90</td></tr>
+<tr><td>Fay (never)</td><td>89</td><td>89</td><td>89</td><td>89</td><td>89</td><td>89</td></tr>
 </table>
-<p>Each cohort is a little noisy (15 stores), but the average lands on the truth.</p>
+<p><strong>January group:</strong> their "before" is Oct&ndash;Dec, their "after" is
+Jan&ndash;Mar. Treated change: 88.0 &minus; 91.0 = <strong>&minus;3.0</strong>.
+Never-treated change over the same months: 89.5 &minus; 89.5 = <strong>0</strong>.
+DiD = <strong>&minus;3.0 kg</strong> — the planted truth.</p>
+<p><strong>February group:</strong> their "before" is Oct&ndash;Jan, their "after" is
+Feb&ndash;Mar. Treated change: 88.5 &minus; 90.5 = <strong>&minus;2.0</strong>.
+Never-treated change over the same months: <strong>0</strong>. DiD =
+<strong>&minus;2.0 kg</strong> — the planted truth.</p>
+<p><strong>Average:</strong> (&minus;3.0 + &minus;2.0) / 2 = <strong>&minus;2.5
+kg</strong>. Each group compared against the never-treated over <em>its own</em>
+calendar window. Nothing fancy — just the plain DiD you already know, run twice.</p>
 
-<h2>The twist: the naive one-big-regression lies to you</h2>
-<p>The tempting shortcut is one giant regression with store and month fixed effects plus
-a "treated" dummy <span class="formal">[two-way fixed effects, TWFE]</span>. Pooled, it
-says 4.98 — close to the truth here, so you might trust it. But look at its
-<i>event-study</i> version, which estimates the effect month by month:</p>
-<img src="data:image/png;base64,{b64('did_event_twfe.png')}" alt="TWFE event study">
-<p><b>Phantom pre-trends</b> (−1.2, −2.3 before adoption — we <i>planted</i> zero) and
-<b>muted post effects</b> (~2 instead of ~5). Now the honest version, built cohort by
-cohort:</p>
+<h2>The trap: already-treated patients as controls</h2>
+<div class="trap"><strong>Watch what happens with one lazy shortcut.</strong> For the
+February group, suppose we use the <em>January</em> patients as the "control"
+instead of the never-treated — after all, in February the January group isn't
+"starting" anything.<br><br>
+January change over Feb's window (Oct&ndash;Jan vs Feb&ndash;Mar):
+90.25 &rarr; 88.0 = <strong>&minus;2.25</strong> (they're still losing weight
+<em>from the drug</em>).<br>
+February change: <strong>&minus;2.0</strong>.<br>
+"DiD" = &minus;2.0 &minus; (&minus;2.25) = <strong>+0.25 kg</strong> — the drug looks
+like it causes weight <em>gain</em>.<br><br>
+Using already-treated patients as the control subtracts the drug's own effect and
+can even flip the sign <span class="formal">[forbidden comparisons]</span>. This is
+the mistake the naive one-big-regression makes quietly, inside its machinery.</div>
+
+<h2>Does the machinery work? 100 patients, planted answers</h2>
+<p>Same idea, bigger: 20 January starters (truth &minus;4), 20 February starters
+(truth &minus;3), 20 March starters (truth &minus;2), 40 never-treated. One honest
+DiD per start month, reusing the code bank's <code>did_2x2</code>:</p>
+<table>
+<tr><th>Start month</th><th>Estimated effect</th><th>Planted truth</th></tr>
+<tr><td>January</td><td>{ce['jan']['estimate']:.2f} kg</td><td>&minus;4.00 kg</td></tr>
+<tr><td>February</td><td>{ce['feb']['estimate']:.2f} kg</td><td>&minus;3.00 kg</td></tr>
+<tr><td>March</td><td>{ce['mar']['estimate']:.2f} kg</td><td>&minus;2.00 kg</td></tr>
+</table>
+<p><strong>Average effect: {res['att']:.2f} kg</strong> vs planted truth
+&minus;3.00 kg. <span class="formal">[The average treatment effect on the
+treated, ATT.]</span></p>
+
+<h2>The event-study plot: lined up by "months since starting"</h2>
+<p>Instead of one number, estimate the effect <em>month by month</em> relative to
+each patient's start — month &minus;1 is the reference (zero by construction).
+Before starting, the estimates should hover near zero (no effect before the drug
+exists); after starting, they should sit near the true effect:</p>
 <img src="data:image/png;base64,{b64('did_event_cohort.png')}" alt="Cohort event study">
-<p>Flat around zero before, clean lift of ~5 after. Same data, two pictures.</p>
-<p><b>Intuition for why.</b> The big regression doesn't just compare treated stores to
-never-treated stores. Behind the scenes it also compares <i>later</i> adopters against
-<i>already-treated</i> stores — using treated stores as controls
-<span class="formal">[Goodman-Bacon decomposition; "forbidden comparisons"]</span>.
-When effects differ across waves (here: 8 down to 2), those comparisons smear effects
-across time periods <span class="formal">[Sun &amp; Abraham contamination]</span>:
-pre-period coefficients absorb post-treatment effects with negative weights, inventing
-trends that never existed and shrinking the real ones. The cohort method never lets a
-treated store play control. That's the whole difference, and it's why the modern best
-practice is cohort-first.</p>
+<p>Pre-start months (&minus;3, &minus;2): {ev['-3']:.2f}, {ev['-2']:.2f} &mdash; essentially
+zero, as they should be. Post-start months: {ev['0']:.2f}, {ev['1']:.2f},
+{ev['2']:.2f}, {ev['3']:.2f} &mdash; hovering around the true &minus;3.0.
+<span class="formal">[Event-study plot.]</span> One caution from the fine print:
+flat pre-trends are <em>reassuring</em>, not <em>proof</em> &mdash; they can't show
+you what would have happened after.</p>
 
-<h2>Checks along the way</h2>
-<div class="proveit">
-<b>Check 1 — pre-period flatness.</b> The cohort event study's pre-coefficients sit at
-0.9 and 0.5 with wide intervals covering zero: no effect before adoption, as planted.
-The parallel-trends check, now month by month.<br><br>
-<b>Check 2 — placebo.</b> Thirty repetitions of fake four-wave adoptions among the
-never-treated stores, run through the identical cohort machinery: average estimated
-effect <b>0.06 ± 0.09</b>. Finds nothing, as it should.<br><br>
-<b>Check 3 — the planted truth.</b> True average effect 5.0 → recovered 4.8 ± 1.1.
-The method found what we hid, per cohort and overall.<br><br>
-<b>Check 4 — the check that caught <i>my</i> bug.</b> My first placebo accidentally
-included already-treated stores in the control group and returned −2.58 — the check
-screamed, I looked, and the contamination was exactly the forbidden-comparison problem
-above, in miniature. The checks aren't decoration; this one earned its keep.
-</div>
+<h2>Placebo: the method must stay quiet when nothing happened</h2>
+<p>Take the 40 never-treated patients, randomly label 20 of them "fake treated,"
+and run the whole machine. Repeat 30 times. Average fake effect:
+<strong>{res['placebo_mean']:.2f} kg</strong> (truth: 0). It finds nothing, as it
+should. <span class="formal">[Placebo / falsification test.]</span></p>
+
+<h2>What about one big regression?</h2>
+<p>The naive approach &mdash; one regression with patient and month adjustments and a
+single "on the drug" switch <span class="formal">[two-way fixed effects,
+TWFE]</span> &mdash; gives <strong>{res['twfe']:.2f} kg</strong> here, close to the
+honest answer because our planted effects are steady. Don't let that comfort you:
+inside, it still mixes already-treated patients into its comparisons (the trap
+above), and when effects grow or fade over time it can distort badly. The
+cohort-by-cohort version never lets that happen, because its control group is
+always genuinely untreated.</p>
+
+<h2>When even the good version fails</h2>
+<p>Suppose doctors prescribed the drug to the patients whose weight was
+<em>spiking</em> — the worst-off got treated first. Then the treated groups were
+already on a different trajectory than the never-treated, and no estimator, however
+careful, can fix that: the comparison was broken at assignment.
+<span class="formal">[Selection on the outcome; the parallel-trends assumption
+fails.]</span> Same if patients started dieting the month <em>before</em> their
+prescription (the "baseline" is already affected)
+<span class="formal">[anticipation effects]</span>. Staggered DiD fixes the
+<em>timing</em> problem; it cannot fix a <em>selection</em> problem. Always ask how
+people ended up treated.</p>
 
 <h2>Limitations, honestly</h2>
 <ul>
-<li><b>Parallel trends, per cohort.</b> Each wave needs its own believable parallel
-path with the controls. More waves, more assumptions.</li>
-<li><b>No anticipation</b> <span class="formal">[no anticipatory effects]</span> — stores
-didn't change behavior <i>before</i> their adoption month. If they staffed up early,
-month −1 is already treated.</li>
-<li><b>No spillover between stores</b> — a treated store didn't steal sales from a
-control store across the street.</li>
-<li><b>Effects assumed constant within cohort here;</b> real effects may also evolve
-over event time — the event study is how you'd see that.</li>
-<li><b>Standard errors are approximate</b> (clustering at the store level deserves a
-fuller treatment with few cohorts).</li>
+<li><strong>You need never-treated (or not-yet-treated) people.</strong> If everyone
+eventually takes the drug, the comparison runs out — you can only study horizons
+where a valid control group still exists.</li>
+<li><strong>Keep the comparison window common.</strong> Don't compare month 6
+(only January starters observed that long) against month 1 (everyone observed) and
+call the difference "the effect growing" — the <em>mix of patients</em> changed,
+not necessarily the effect.</li>
+<li><strong>Synthetic is clean; reality isn't.</strong> Real prescribing has messy
+timing, partial adherence, and spillovers (partners dieting together). The machinery
+is the same; the vigilance has to be higher.</li>
 </ul>
 
-<div class="boss"><b>The 30-second version for your boss.</b><br>
-"Different stores got the new system in different months, so we lined every store up
-on its own clock — three months before and after its start date. For each wave of
-stores, we compared their change against stores that never got the system over the
-same calendar months; those stores show us what would have happened anyway. Then we
-averaged across the four waves: about +$4.8k per store per month. One technical
-judgment call: we did it wave by wave on purpose, because the shortcut version —
-one big regression — quietly compares later stores against already-treated ones and
-gives a distorted picture. The wave-by-wave version doesn't."</div>
+<div class="boss"><strong>The 30-second version for your boss.</strong><br><br>
+"We wanted to know if the weight-loss drug worked, but patients started it in
+different months, so there's no single 'before and after.' We lined everyone up on
+<em>months since they started</em> instead of calendar month, compared each
+start-month group against patients who never took it, and averaged the results:
+about 3 kg of weight loss. The key discipline: never use already-treated patients
+as the comparison group — their weight already reflects the drug, and doing so can
+make a working drug look harmful. The one judgment call, as always, is that the
+groups would have trended together without the drug — which is about <em>why</em>
+people started it when they did, not something a chart can prove."</div>
 
-<h2>The code</h2>
-<p>The bank's <code>did_2x2</code> did the per-cohort work unchanged — first reuse,
-flywheel turning. The staggered machinery (event-time relabeling, cohort aggregation,
-both event studies, the repeated placebo) is new code in
-<code>scripts/did_staggered.py</code>, shown here for review and <b>not</b> in the bank
-until you say so:</p>
-<pre>df["event"] = df["month_idx"] - df["adopt_month"]  # each store's own clock
-
-# one honest DiD per cohort, vs never-treated, then average
-ests = []
-for cohort, ai in cohorts.items():
-    win = df[((df.cohort == cohort) | (df.cohort == "never")) &
-             (df.mi >= ai - 3) & (df.mi <= ai + 2)]
-    win["post"] = win.mi >= ai
-    ests.append(did_2x2(win, "ever_treated", "post", "sales")["estimate"])
-att = sum(ests) / len(ests)   # 4.8, truth 5.0</pre>
-<p class="small">Full script: <code>scripts/did_staggered.py</code>. Data:
-<code>data/did_staggered.csv</code> (100 stores × 15 months, planted effects 8/6/4/2).</p>
-
-<h2>What's next</h2>
-<p>Your call. Candidates: apply the cohort machinery to a real dataset (where the
-answer key doesn't exist and the checks carry the weight), add covariates to the
-comparison, or the event-study plot as a standalone recipe for the bank.</p>
-</body></html>"""
+<div class="proveit"><strong>Prove it.</strong> The simulation script
+(<code>scripts/did_staggered.py</code>) plants the effects, so every number above
+is checkable against the answer key in
+<code>output/did_staggered_results.json</code>. The hand-worked 6-patient tables
+can be verified with a calculator.</div>
+</body></html>
+"""
 
 out = STUDY / "did-staggered-case-study.html"
 out.write_text(html)
-print("written:", out, f"({out.stat().st_size/1024:.0f} KB)")
+print(f"written: {out} ({len(html)//1024} KB)")

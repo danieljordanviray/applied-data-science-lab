@@ -11,10 +11,10 @@ assumption, placebo testing. Intuitive first, formal names in brackets, with a
 
 ## 2. Staggered timing — [did-staggered-case-study.html](did-staggered-case-study.html)
 
-Treatment arrives in four waves (Mar/May/Jul/Sep 2022). Event-time relabeling, one
-honest DiD per cohort (reusing the code bank's `did_2x2`) then averaged — and a
-demonstration of why the naive one-big-regression invents phantom pre-trends
-([Goodman-Bacon], [Sun & Abraham] contamination, shown side by side).
+100 patients, one weight-loss drug, three different start months. Line everyone up
+on "months since starting" [event time], run one honest DiD per start-month group
+against the never-treated, then average. Includes a hand-worked 6-patient example
+and a demo of how using already-treated patients as controls can flip the sign.
 
 ## Reproduce
 
