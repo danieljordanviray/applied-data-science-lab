@@ -329,7 +329,7 @@ check("rolling avg", [(r[3], r[4]) for r in r4],
 
 q5 = """SELECT patient_id, admin_date,
        SUM(dose_mg) OVER (PARTITION BY patient_id ORDER BY admin_date
-                          ROWS UNBOUNDED PRECEDING) AS running_total_mg
+                          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total_mg
 FROM med_admin ORDER BY patient_id, admin_date;"""
 cols, r5 = run(q5)
 check("running total", [r[2] for r in r5], [500.0, 1000.0, 1250.0, 850.0])
@@ -390,7 +390,7 @@ the first few values.</p>
 <h2>Running total of dose, per patient</h2>
 <pre>{escape(q5)}</pre>
 {table(*run(q5))}
-<p><code>ROWS UNBOUNDED PRECEDING</code>: "everything from the patient's first row
+<p><code>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code>: "everything from the patient's first row
 up to this one." Cumulative dose, cumulative cost, cumulative events — same shape.</p>
 """ + watchout([
   "<code>ORDER BY</code> inside <code>OVER</code> defines row order — without it, <code>ROW_NUMBER()</code> is arbitrary.",
