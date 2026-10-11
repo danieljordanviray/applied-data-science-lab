@@ -34,6 +34,7 @@ const CATS = [
   ["experimentation", "Experimentation"],
   ["causal-inference", "Causal Inference"],
   ["machine-learning", "Machine Learning"],
+  ["sql", "SQL"],
 ];
 const POSTS = [
   { cat: "stats-and-prob",
@@ -48,6 +49,26 @@ const POSTS = [
     title: "Staggered Difference in Differences",
     url: "../causal-inference/difference-in-differences/did-staggered-case-study.html",
     desc: "When treatment arrives in waves: one honest comparison per rollout group, then averaged — plus a demo of how the naive one-big-regression invents effects that aren't there." },
+  { cat: "sql",
+    title: "COALESCE and NULLIF",
+    url: "../sql/coalesce-nullif/coalesce-nullif.html",
+    desc: "Tame NULLs and placeholder zeros: defaults for display, honest averages, and division without the divide-by-zero." },
+  { cat: "sql",
+    title: "CTEs and Subqueries",
+    url: "../sql/ctes-subqueries/ctes-subqueries.html",
+    desc: "Same question, two shapes: name your intermediate steps with WITH, or nest them inline. Readability is the difference." },
+  { cat: "sql",
+    title: "Date Spines and CROSS JOINs",
+    url: "../sql/date-spines/date-spines.html",
+    desc: "No row for quiet days? Build a calendar spine, cross it with your categories, and LEFT JOIN the events on \u2014 zeros included." },
+  { cat: "sql",
+    title: "EXISTS vs IN / NOT IN",
+    url: "../sql/exists-vs-in-not-in/exists-vs-in-not-in.html",
+    desc: "Three ways to ask 'who has a matching row?' \u2014 plus the NULL trap that makes NOT IN silently return nothing." },
+  { cat: "sql",
+    title: "Window Functions",
+    url: "../sql/window-functions/window-functions.html",
+    desc: "ROW_NUMBER, RANK, LAG/LEAD, rolling averages and running totals \u2014 per patient, per category \u2014 without collapsing rows." },
 ];
 
 const index = document.getElementById("index");

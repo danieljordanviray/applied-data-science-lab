@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COALESCE and NULLIF — SQL notes</title>
+<style>
+body { font-family: -apple-system, Georgia, serif; max-width: 720px; margin: 0 auto;
+       padding: 24px 18px; line-height: 1.7; color: #1a1a1a; }
+h1 { font-size: 1.6em; } h2 { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+h3 { margin-top: 1.6em; }
+.topnav { font-size: .85rem; margin: 0 0 1.2em; }
+.topnav a { color: #1f6feb; text-decoration: none; }
+.watchout { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; margin: 1.5em 0; }
+.watchout strong { color: #92400e; }
+.proveit { background: #eef7ee; border-left: 4px solid #2a7d2a; padding: 12px 16px; margin: 1.5em 0; }
+table { border-collapse: collapse; font-size: 0.88em; margin: 1em 0; }
+th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+th { background: #f0f0f0; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.small { color: #555; font-size: 0.9em; }
+code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+pre { background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; }
+.null { color: #999; font-style: italic; }
+</style></head><body>
+<div class="topnav"><a href="../../docs/index.html">← Homepage</a></div>
+<h1>COALESCE and NULLIF</h1>
+<p class="small">SQL notes · clinical toy data · defaults for NULLs, and taming placeholder zeros</p>
+
+<p><strong>The idea.</strong> <code>COALESCE</code> returns the first non-<code>NULL</code>
+value in its list — for defaults and display. <code>NULLIF(a, b)</code> returns
+<code>NULL</code> when <code>a = b</code> — for turning placeholder values (like a
+<code>0</code> that means "unknown") back into real <code>NULL</code>s so they don't
+corrupt your math.</p>
+
+<h2>Toy data</h2>
+<p class="small">labs — patient 2's result never came back (NULL)</p>
+<table>
+<tr><th>patient_id</th><th>test_date</th><th>hba1c</th></tr>
+<tr><td>1</td><td>2024-01-05</td><td class="num">8.2</td></tr>
+<tr><td>2</td><td>2024-02-11</td><td class="null">NULL</td></tr>
+<tr><td>3</td><td>2024-03-01</td><td class="num">7.1</td></tr>
+</table>
+
+<p class="small">doses — patient 2's weight recorded as 0 (missing-data placeholder)</p>
+<table>
+<tr><th>patient_id</th><th>dose_mg</th><th>weight_kg</th></tr>
+<tr><td>1</td><td class="num">500.0</td><td class="num">80.0</td></tr>
+<tr><td>2</td><td class="num">850.0</td><td class="num">0.0</td></tr>
+<tr><td>3</td><td class="num">1000.0</td><td class="num">95.0</td></tr>
+</table>
+
+
+<h2>COALESCE: fill the gap for display</h2>
+<pre>SELECT patient_id,
+       COALESCE(CAST(hba1c AS TEXT), &#x27;pending&#x27;) AS result
+FROM labs ORDER BY patient_id;</pre>
+<table>
+<tr><th>patient_id</th><th>result</th></tr>
+<tr><td>1</td><td>8.2</td></tr>
+<tr><td>2</td><td>pending</td></tr>
+<tr><td>3</td><td>7.1</td></tr>
+</table>
+
+<p>Reads left to right, stops at the first non-<code>NULL</code>. The lab value if
+present, the word "pending" otherwise.</p>
+
+<h2>COALESCE changes your averages — know which question you're answering</h2>
+<pre>SELECT ROUND(AVG(hba1c), 2) AS avg_observed,
+       ROUND(AVG(COALESCE(hba1c, 0)), 2) AS avg_zero_filled
+FROM labs;</pre>
+<table>
+<tr><th>avg_observed</th><th>avg_zero_filled</th></tr>
+<tr><td class="num">7.65</td><td class="num">5.1</td></tr>
+</table>
+
+<p><code>AVG(hba1c)</code> ignores <code>NULL</code>s (denominator 2 → 7.65: the mean
+of <em>observed</em> results). <code>AVG(COALESCE(hba1c, 0))</code> fills the gap
+first (denominator 3 → 5.10: the mean <em>assuming missing = 0</em>). Neither is
+"right" — but they answer different questions, and filling blindly can manufacture
+a worse number than the honest one.</p>
+
+<h2>NULLIF: turn a placeholder zero back into unknown</h2>
+<pre>SELECT patient_id,
+       ROUND(dose_mg / NULLIF(weight_kg, 0), 2) AS mg_per_kg
+FROM doses ORDER BY patient_id;</pre>
+<table>
+<tr><th>patient_id</th><th>mg_per_kg</th></tr>
+<tr><td>1</td><td class="num">6.25</td></tr>
+<tr><td>2</td><td class="null">NULL</td></tr>
+<tr><td>3</td><td class="num">10.53</td></tr>
+</table>
+
+<p>Patient 2's weight of <code>0</code> isn't a real weight — it's how "unknown" got
+typed in. Without <code>NULLIF</code> this query divides by zero (error, or worse,
+an <code>Infinity</code> that flows downstream). <code>NULLIF(weight_kg, 0)</code>
+converts the placeholder back into what it means: unknown → the result is
+<code>NULL</code>, honestly.</p>
+<div class="watchout"><strong>Watch out.</strong><ul><li>Don't <code>COALESCE</code> away <code>NULL</code>s before you understand <em>why</em> they're <code>NULL</code> — a missing lab and a lab of 0 are different facts.</li><li><code>COALESCE(a, b)</code> is standard SQL (<code>IFNULL</code>/<code>NVL</code> are dialect spellings of the two-argument case).</li><li><code>NULLIF</code> also guards rate calculations: <code>events / NULLIF(days, 0)</code> never divides by zero.</li></ul></div>
+
+<div class="proveit"><strong>Prove it.</strong> Every query on this page was run
+against SQLite and the tables show actual output — not hand-typed guesses.</div>
+</body></html>

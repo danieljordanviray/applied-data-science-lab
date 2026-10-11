@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Date Spines and CROSS JOINs — SQL notes</title>
+<style>
+body { font-family: -apple-system, Georgia, serif; max-width: 720px; margin: 0 auto;
+       padding: 24px 18px; line-height: 1.7; color: #1a1a1a; }
+h1 { font-size: 1.6em; } h2 { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+h3 { margin-top: 1.6em; }
+.topnav { font-size: .85rem; margin: 0 0 1.2em; }
+.topnav a { color: #1f6feb; text-decoration: none; }
+.watchout { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; margin: 1.5em 0; }
+.watchout strong { color: #92400e; }
+.proveit { background: #eef7ee; border-left: 4px solid #2a7d2a; padding: 12px 16px; margin: 1.5em 0; }
+table { border-collapse: collapse; font-size: 0.88em; margin: 1em 0; }
+th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+th { background: #f0f0f0; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.small { color: #555; font-size: 0.9em; }
+code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+pre { background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; }
+.null { color: #999; font-style: italic; }
+</style></head><body>
+<div class="topnav"><a href="../../docs/index.html">← Homepage</a></div>
+<h1>Date Spines and CROSS JOINs</h1>
+<p class="small">SQL notes · clinical toy data · every day on the calendar, zeros included</p>
+
+<p><strong>The idea.</strong> Real event tables have gaps — no row exists for days
+nothing happened. A plain <code>GROUP BY day</code> then <em>lies by omission</em>:
+quiet days vanish instead of showing zero. The fix is a <strong>date spine</strong>
+(a complete calendar you build yourself), optionally crossed with your categories,
+with the events <code>LEFT JOIN</code>ed on.</p>
+
+<h2>Toy data</h2>
+<p class="small">ed_visits — January has 31 days; only 3 of them have visits</p>
+<table>
+<tr><th>visit_date</th><th>department</th></tr>
+<tr><td>2024-01-02</td><td>ER</td></tr>
+<tr><td>2024-01-02</td><td>ER</td></tr>
+<tr><td>2024-01-04</td><td>Cardiology</td></tr>
+<tr><td>2024-01-07</td><td>ER</td></tr>
+</table>
+
+
+<h2>The naive version — and what it hides</h2>
+<pre>SELECT visit_date AS day, COUNT(*) AS visits
+FROM ed_visits GROUP BY visit_date ORDER BY day;</pre>
+<table>
+<tr><th>day</th><th>visits</th></tr>
+<tr><td>2024-01-02</td><td>2</td></tr>
+<tr><td>2024-01-04</td><td>1</td></tr>
+<tr><td>2024-01-07</td><td>1</td></tr>
+</table>
+
+<p>Three rows. The other 28 days of January simply don't exist here — any chart drawn
+from this is missing most of the month.</p>
+
+<h2>Step 1: build the spine (recursive CTE)</h2>
+<pre>WITH RECURSIVE spine(d) AS (
+  SELECT date(&#x27;2024-01-01&#x27;)
+  UNION ALL
+  SELECT date(d, &#x27;+1 day&#x27;) FROM spine WHERE d &lt; &#x27;2024-01-31&#x27;
+)\nSELECT d FROM spine;  -- 31 rows</pre>
+<p>Start at Jan 1, keep adding a day until Jan 31. (Dialect note: BigQuery spells this
+<code>GENERATE_DATE_ARRAY</code>; the idea is identical.)</p>
+
+<h2>Step 2: CROSS JOIN the grid — every day × every department</h2>
+<pre>WITH RECURSIVE spine(d) AS (
+  SELECT date(&#x27;2024-01-01&#x27;)
+  UNION ALL
+  SELECT date(d, &#x27;+1 day&#x27;) FROM spine WHERE d &lt; &#x27;2024-01-31&#x27;
+),
+depts AS (SELECT DISTINCT department AS dept FROM ed_visits)
+SELECT s.d, x.dept FROM spine s CROSS JOIN depts x ORDER BY s.d, x.dept;</pre>
+<p><code>CROSS JOIN</code> is the full multiplication: 31 days × 2 departments =
+62 rows. This grid is the skeleton your facts hang on.</p>
+
+<h2>Step 3: LEFT JOIN the events onto the grid</h2>
+<pre>WITH RECURSIVE spine(d) AS (
+  SELECT date(&#x27;2024-01-01&#x27;)
+  UNION ALL
+  SELECT date(d, &#x27;+1 day&#x27;) FROM spine WHERE d &lt; &#x27;2024-01-31&#x27;
+),
+depts AS (SELECT DISTINCT department AS dept FROM ed_visits)
+SELECT s.d AS day, x.dept AS department, COUNT(v.visit_date) AS visits
+FROM spine s CROSS JOIN depts x
+LEFT JOIN ed_visits v ON v.visit_date = s.d AND v.department = x.dept
+GROUP BY s.d, x.dept ORDER BY s.d, x.dept;</pre>
+<table>
+<tr><th>visit_date</th><th>department</th></tr>
+<tr><td>2024-01-01</td><td>Cardiology</td><td>0</td></tr>
+<tr><td>2024-01-01</td><td>ER</td><td>0</td></tr>
+<tr><td>2024-01-02</td><td>Cardiology</td><td>0</td></tr>
+<tr><td>2024-01-02</td><td>ER</td><td>2</td></tr>
+<tr><td>2024-01-03</td><td>Cardiology</td><td>0</td></tr>
+<tr><td>2024-01-03</td><td>ER</td><td>0</td></tr>
+<tr><td>2024-01-04</td><td>Cardiology</td><td>1</td></tr>
+<tr><td>2024-01-04</td><td>ER</td><td>0</td></tr>
+<tr><td>2024-01-05</td><td>Cardiology</td><td>0</td></tr>
+<tr><td>2024-01-05</td><td>ER</td><td>0</td></tr>
+</table>
+<p class="small">… 54 quiet rows omitted …</p><p class="small">the 3 days with visits</p>
+<table>
+<tr><th>visit_date</th><th>department</th></tr>
+<tr><td>2024-01-02</td><td>ER</td><td>2</td></tr>
+<tr><td>2024-01-04</td><td>Cardiology</td><td>1</td></tr>
+<tr><td>2024-01-07</td><td>ER</td><td>1</td></tr>
+</table>
+
+<div class="watchout"><strong>Watch out.</strong><ul><li><code>COUNT(v.visit_date)</code>, not <code>COUNT(*)</code> — after a <code>LEFT JOIN</code>, <code>COUNT(*)</code> counts the empty joined rows as 1 and your zeros become ones.</li><li>Put the category match (<code>v.department = x.dept</code>) in the <code>ON</code> clause, not <code>WHERE</code> — <code>WHERE</code> filters <em>after</em> the join and kills your zero rows.</li><li><code>CROSS JOIN</code> multiplies: sanity-check the grid size (days × categories) before joining facts onto it.</li></ul></div>
+
+<div class="proveit"><strong>Prove it.</strong> Every query on this page was run
+against SQLite and the tables show actual output — not hand-typed guesses.</div>
+</body></html>

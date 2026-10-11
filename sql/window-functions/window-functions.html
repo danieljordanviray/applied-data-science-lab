@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Window Functions — SQL notes</title>
+<style>
+body { font-family: -apple-system, Georgia, serif; max-width: 720px; margin: 0 auto;
+       padding: 24px 18px; line-height: 1.7; color: #1a1a1a; }
+h1 { font-size: 1.6em; } h2 { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+h3 { margin-top: 1.6em; }
+.topnav { font-size: .85rem; margin: 0 0 1.2em; }
+.topnav a { color: #1f6feb; text-decoration: none; }
+.watchout { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; margin: 1.5em 0; }
+.watchout strong { color: #92400e; }
+.proveit { background: #eef7ee; border-left: 4px solid #2a7d2a; padding: 12px 16px; margin: 1.5em 0; }
+table { border-collapse: collapse; font-size: 0.88em; margin: 1em 0; }
+th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+th { background: #f0f0f0; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.small { color: #555; font-size: 0.9em; }
+code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+pre { background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; }
+.null { color: #999; font-style: italic; }
+</style></head><body>
+<div class="topnav"><a href="../../docs/index.html">← Homepage</a></div>
+<h1>Window Functions</h1>
+<p class="small">SQL notes · clinical toy data · per-group calculations without collapsing rows</p>
+
+<p><strong>The idea.</strong> Aggregates like <code>AVG</code> collapse rows; window
+functions don't. Each row keeps its identity while the function peers at a
+<em>window</em> of related rows — the patient's other visits, the previous reading,
+a running total. One query, row-level detail <em>and</em> group math.</p>
+
+<h2>The shape (learn this once, reuse forever)</h2>
+<pre>SELECT patient_id, reading_date, hba1c,
+  FUNC(...) OVER (
+    PARTITION BY patient_id   -- restart per patient (&quot;per category&quot;)
+    ORDER BY reading_date     -- the sequence within each group
+    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW  -- the frame: which rows count
+  )
+FROM a1c_readings;</pre>
+<p><code>PARTITION BY</code> is "per category": restart the calculation for each
+patient (or ward, or drug). <code>ORDER BY</code> defines the sequence. The frame
+(<code>ROWS BETWEEN …</code>) says which rows count — omit it and you get the
+default, which is rarely what you want for rolling math.</p>
+
+<h2>Toy data</h2>
+<p class="small">a1c_readings — HbA1c lab readings per patient over time</p>
+<table>
+<tr><th>patient_id</th><th>reading_date</th><th>hba1c</th></tr>
+<tr><td>1</td><td>2024-01-05</td><td class="num">8.2</td></tr>
+<tr><td>1</td><td>2024-04-02</td><td class="num">7.9</td></tr>
+<tr><td>1</td><td>2024-07-10</td><td class="num">7.9</td></tr>
+<tr><td>1</td><td>2024-10-01</td><td class="num">7.4</td></tr>
+<tr><td>2</td><td>2024-02-11</td><td class="num">9.1</td></tr>
+<tr><td>2</td><td>2024-05-20</td><td class="num">8.8</td></tr>
+</table>
+
+<p class="small">med_admin — medication doses administered</p>
+<table>
+<tr><th>patient_id</th><th>admin_date</th><th>dose_mg</th></tr>
+<tr><td>1</td><td>2024-01-05</td><td class="num">500.0</td></tr>
+<tr><td>1</td><td>2024-02-05</td><td class="num">500.0</td></tr>
+<tr><td>1</td><td>2024-03-05</td><td class="num">250.0</td></tr>
+<tr><td>2</td><td>2024-02-11</td><td class="num">850.0</td></tr>
+</table>
+
+
+<h2>Visit number per patient — ROW_NUMBER()</h2>
+<pre>SELECT patient_id, reading_date,
+       ROW_NUMBER() OVER (PARTITION BY patient_id ORDER BY reading_date) AS visit_n
+FROM a1c_readings ORDER BY patient_id, reading_date;</pre>
+<table>
+<tr><th>patient_id</th><th>reading_date</th><th>visit_n</th></tr>
+<tr><td>1</td><td>2024-01-05</td><td>1</td></tr>
+<tr><td>1</td><td>2024-04-02</td><td>2</td></tr>
+<tr><td>1</td><td>2024-07-10</td><td>3</td></tr>
+<tr><td>1</td><td>2024-10-01</td><td>4</td></tr>
+<tr><td>2</td><td>2024-02-11</td><td>1</td></tr>
+<tr><td>2</td><td>2024-05-20</td><td>2</td></tr>
+</table>
+
+
+<h2>Rank readings within each patient — RANK() vs DENSE_RANK()</h2>
+<pre>SELECT patient_id, hba1c,
+       RANK() OVER (PARTITION BY patient_id ORDER BY hba1c DESC) AS rnk,
+       DENSE_RANK() OVER (PARTITION BY patient_id ORDER BY hba1c DESC) AS dense_rnk
+FROM a1c_readings ORDER BY patient_id, hba1c DESC;</pre>
+<table>
+<tr><th>patient_id</th><th>hba1c</th><th>rnk</th><th>dense_rnk</th></tr>
+<tr><td>1</td><td class="num">8.2</td><td>1</td><td>1</td></tr>
+<tr><td>1</td><td class="num">7.9</td><td>2</td><td>2</td></tr>
+<tr><td>1</td><td class="num">7.9</td><td>2</td><td>2</td></tr>
+<tr><td>1</td><td class="num">7.4</td><td>4</td><td>3</td></tr>
+<tr><td>2</td><td class="num">9.1</td><td>1</td><td>1</td></tr>
+<tr><td>2</td><td class="num">8.8</td><td>2</td><td>2</td></tr>
+</table>
+
+<p>Patient 1 has two readings of 7.9 (a tie). <code>RANK()</code> gives both rank 2
+then <em>skips</em> to 4; <code>DENSE_RANK()</code> doesn't skip (2, 2, 3). Pick
+based on whether the skipped numbers matter downstream.</p>
+
+<h2>Change since last visit — LAG() (and LEAD() looks forward)</h2>
+<pre>SELECT patient_id, reading_date, hba1c,
+       ROUND(hba1c - LAG(hba1c) OVER (PARTITION BY patient_id ORDER BY reading_date), 2)
+         AS change_since_last
+FROM a1c_readings ORDER BY patient_id, reading_date;</pre>
+<table>
+<tr><th>patient_id</th><th>reading_date</th><th>hba1c</th><th>change_since_last</th></tr>
+<tr><td>1</td><td>2024-01-05</td><td class="num">8.2</td><td class="null">NULL</td></tr>
+<tr><td>1</td><td>2024-04-02</td><td class="num">7.9</td><td class="num">-0.3</td></tr>
+<tr><td>1</td><td>2024-07-10</td><td class="num">7.9</td><td class="num">0.0</td></tr>
+<tr><td>1</td><td>2024-10-01</td><td class="num">7.4</td><td class="num">-0.5</td></tr>
+<tr><td>2</td><td>2024-02-11</td><td class="num">9.1</td><td class="null">NULL</td></tr>
+<tr><td>2</td><td>2024-05-20</td><td class="num">8.8</td><td class="num">-0.3</td></tr>
+</table>
+
+<p><code>LAG(hba1c)</code> is "the previous row's value, within this patient's
+sequence." The first row per patient has no previous row → <code>NULL</code>,
+honestly. <code>LEAD()</code> is the mirror image (next row).</p>
+
+<h2>Rolling 3-reading average, per patient</h2>
+<pre>SELECT patient_id, reading_date,
+       ROUND(AVG(hba1c) OVER (PARTITION BY patient_id ORDER BY reading_date
+                              ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2)
+         AS rolling_avg_3
+FROM a1c_readings ORDER BY patient_id, reading_date;</pre>
+<table>
+<tr><th>patient_id</th><th>reading_date</th><th>rolling_avg_3</th></tr>
+<tr><td>1</td><td>2024-01-05</td><td class="num">8.2</td></tr>
+<tr><td>1</td><td>2024-04-02</td><td class="num">8.05</td></tr>
+<tr><td>1</td><td>2024-07-10</td><td class="num">8.0</td></tr>
+<tr><td>1</td><td>2024-10-01</td><td class="num">7.73</td></tr>
+<tr><td>2</td><td>2024-02-11</td><td class="num">9.1</td></tr>
+<tr><td>2</td><td>2024-05-20</td><td class="num">8.95</td></tr>
+</table>
+
+<p>The frame <code>ROWS BETWEEN 2 PRECEDING AND CURRENT ROW</code> is the whole
+trick: "this reading and the two before it." Early rows just average fewer
+readings — the frame has fewer rows to work with, no error.</p>
+
+<h2>Running total of dose, per patient</h2>
+<pre>SELECT patient_id, admin_date,
+       SUM(dose_mg) OVER (PARTITION BY patient_id ORDER BY admin_date
+                          ROWS UNBOUNDED PRECEDING) AS running_total_mg
+FROM med_admin ORDER BY patient_id, admin_date;</pre>
+<table>
+<tr><th>patient_id</th><th>admin_date</th><th>running_total_mg</th></tr>
+<tr><td>1</td><td>2024-01-05</td><td class="num">500.0</td></tr>
+<tr><td>1</td><td>2024-02-05</td><td class="num">1000.0</td></tr>
+<tr><td>1</td><td>2024-03-05</td><td class="num">1250.0</td></tr>
+<tr><td>2</td><td>2024-02-11</td><td class="num">850.0</td></tr>
+</table>
+
+<p><code>ROWS UNBOUNDED PRECEDING</code>: "everything from the patient's first row
+up to this one." Cumulative dose, cumulative cost, cumulative events — same shape.</p>
+<div class="watchout"><strong>Watch out.</strong><ul><li><code>ORDER BY</code> inside <code>OVER</code> defines row order — without it, <code>ROW_NUMBER()</code> is arbitrary.</li><li><code>ROWS</code> counts physical rows; <code>RANGE</code> groups tied values. Say <code>ROWS</code> when you mean rows.</li><li>Forget <code>PARTITION BY</code> and your 'per-patient' running total silently runs across <em>all</em> patients.</li><li>Window functions run <em>after</em> <code>WHERE</code>/<code>GROUP BY</code> — you can't put one in a <code>WHERE</code> clause; wrap it in a subquery or CTE first.</li></ul></div>
+
+<div class="proveit"><strong>Prove it.</strong> Every query on this page was run
+against SQLite and the tables show actual output — not hand-typed guesses.</div>
+</body></html>

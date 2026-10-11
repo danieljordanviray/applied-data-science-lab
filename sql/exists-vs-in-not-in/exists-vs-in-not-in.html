@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EXISTS vs IN / NOT IN — SQL notes</title>
+<style>
+body { font-family: -apple-system, Georgia, serif; max-width: 720px; margin: 0 auto;
+       padding: 24px 18px; line-height: 1.7; color: #1a1a1a; }
+h1 { font-size: 1.6em; } h2 { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+h3 { margin-top: 1.6em; }
+.topnav { font-size: .85rem; margin: 0 0 1.2em; }
+.topnav a { color: #1f6feb; text-decoration: none; }
+.watchout { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; margin: 1.5em 0; }
+.watchout strong { color: #92400e; }
+.proveit { background: #eef7ee; border-left: 4px solid #2a7d2a; padding: 12px 16px; margin: 1.5em 0; }
+table { border-collapse: collapse; font-size: 0.88em; margin: 1em 0; }
+th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+th { background: #f0f0f0; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.small { color: #555; font-size: 0.9em; }
+code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+pre { background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; }
+.null { color: #999; font-style: italic; }
+</style></head><body>
+<div class="topnav"><a href="../../docs/index.html">← Homepage</a></div>
+<h1>EXISTS vs IN / NOT IN</h1>
+<p class="small">SQL notes · clinical toy data · the NULL trap that empties your result</p>
+
+<p><strong>The idea.</strong> Three ways to ask "which patients have a matching row
+in another table?" <code>EXISTS</code> and <code>IN</code> usually agree. But
+<code>NOT IN</code> has a trap: a single <code>NULL</code> in the subquery list
+silently wipes out the <em>entire</em> result — no error, no warning.</p>
+
+<h2>Toy data</h2>
+<p class="small">patients</p>
+<table>
+<tr><th>patient_id</th><th>name</th></tr>
+<tr><td>1</td><td>Alice</td></tr>
+<tr><td>2</td><td>Bob</td></tr>
+<tr><td>3</td><td>Carol</td></tr>
+<tr><td>4</td><td>Dave</td></tr>
+</table>
+
+<p class="small">prescriptions — note rx 103: paper script, patient never linked (NULL)</p>
+<table>
+<tr><th>rx_id</th><th>patient_id</th><th>drug</th></tr>
+<tr><td>101</td><td>1</td><td>atorvastatin</td></tr>
+<tr><td>102</td><td>2</td><td>metformin</td></tr>
+<tr><td>103</td><td class="null">NULL</td><td>atorvastatin</td></tr>
+<tr><td>104</td><td>1</td><td>lisinopril</td></tr>
+</table>
+
+
+<h2>Who has at least one prescription?</h2>
+<h3>With EXISTS — "is there at least one matching row?"</h3>
+<pre>SELECT name FROM patients p
+WHERE EXISTS (SELECT 1 FROM prescriptions r WHERE r.patient_id = p.patient_id)
+ORDER BY name;</pre>
+<table>
+<tr><th>name</th></tr>
+<tr><td>Alice</td></tr>
+<tr><td>Bob</td></tr>
+</table>
+
+<p>Read it as a per-patient question: for Alice, is there <em>at least one</em>
+prescription row pointing at her? Yes → keep her. Correlated, but the optimizer
+handles it.</p>
+
+<h3>With IN — "is the id in this list?"</h3>
+<pre>SELECT name FROM patients
+WHERE patient_id IN (SELECT patient_id FROM prescriptions)
+ORDER BY name;</pre>
+<table>
+<tr><th>name</th></tr>
+<tr><td>Alice</td></tr>
+<tr><td>Bob</td></tr>
+</table>
+
+<p>Same answer. The <code>NULL</code> in the list doesn't hurt here: Alice and Bob
+match real values, and matching is all <code>IN</code> needs.</p>
+
+<h2>Who has <em>no</em> prescription? — the trap</h2>
+<pre>SELECT name FROM patients
+WHERE patient_id NOT IN (SELECT patient_id FROM prescriptions)
+ORDER BY name;</pre>
+<p class="small">empty — but Carol and Dave have no prescriptions!</p>
+<table>
+<tr><th>name</th></tr>
+</table>
+
+<p><strong>Why empty?</strong> For Carol the database evaluates
+<code>3 NOT IN (1, 2, NULL, 1)</code>, i.e.
+<code>3&lt;&gt;1 AND 3&lt;&gt;2 AND 3&lt;&gt;NULL AND 3&lt;&gt;1</code> →
+<code>TRUE AND TRUE AND UNKNOWN AND TRUE</code> = <code>UNKNOWN</code> — and
+<code>WHERE</code> keeps only <code>TRUE</code> rows. One <code>NULL</code>
+poisons <em>every</em> candidate. In real pipelines the NULL arrives via ETL gaps,
+optional foreign keys, or half-linked records like rx 103.</p>
+
+<h3>Fix 1: filter the NULLs out of the list</h3>
+<pre>SELECT name FROM patients
+WHERE patient_id NOT IN (SELECT patient_id FROM prescriptions WHERE patient_id IS NOT NULL)
+ORDER BY name;</pre>
+<table>
+<tr><th>name</th></tr>
+<tr><td>Carol</td></tr>
+<tr><td>Dave</td></tr>
+</table>
+
+
+<h3>Fix 2: NOT EXISTS — NULL-proof by construction</h3>
+<pre>SELECT name FROM patients p
+WHERE NOT EXISTS (SELECT 1 FROM prescriptions r WHERE r.patient_id = p.patient_id)
+ORDER BY name;</pre>
+<table>
+<tr><th>name</th></tr>
+<tr><td>Carol</td></tr>
+<tr><td>Dave</td></tr>
+</table>
+
+<p><code>NOT EXISTS</code> never compares against the <code>NULL</code> as a value;
+it only asks whether a matching row exists. When the column is nullable, prefer it.</p>
+<div class="watchout"><strong>Watch out.</strong><ul><li><code>NOT IN</code> + any <code>NULL</code> in the subquery = silently empty result. The #1 real-world gotcha.</li><li><code>IN</code> with a <code>NULL</code> in the list is safe for <em>matches</em> — the asymmetry between <code>IN</code> and <code>NOT IN</code> is the lesson.</li><li>If a <code>NOT IN</code> query returns nothing and you expected rows, check the subquery for <code>NULL</code>s first.</li></ul></div>
+
+<div class="proveit"><strong>Prove it.</strong> Every query on this page was run
+against SQLite and the tables show actual output — not hand-typed guesses.</div>
+</body></html>

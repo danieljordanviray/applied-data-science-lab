@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CTEs and Subqueries — SQL notes</title>
+<style>
+body { font-family: -apple-system, Georgia, serif; max-width: 720px; margin: 0 auto;
+       padding: 24px 18px; line-height: 1.7; color: #1a1a1a; }
+h1 { font-size: 1.6em; } h2 { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+h3 { margin-top: 1.6em; }
+.topnav { font-size: .85rem; margin: 0 0 1.2em; }
+.topnav a { color: #1f6feb; text-decoration: none; }
+.watchout { background: #fffbeb; border-left: 4px solid #d97706; padding: 12px 16px; margin: 1.5em 0; }
+.watchout strong { color: #92400e; }
+.proveit { background: #eef7ee; border-left: 4px solid #2a7d2a; padding: 12px 16px; margin: 1.5em 0; }
+table { border-collapse: collapse; font-size: 0.88em; margin: 1em 0; }
+th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
+th { background: #f0f0f0; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.small { color: #555; font-size: 0.9em; }
+code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
+pre { background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; }
+.null { color: #999; font-style: italic; }
+</style></head><body>
+<div class="topnav"><a href="../../docs/index.html">← Homepage</a></div>
+<h1>CTEs and Subqueries</h1>
+<p class="small">SQL notes · clinical toy data · same question, two shapes — readability is the difference</p>
+
+<p><strong>The idea.</strong> A <strong>CTE</strong> (<code>WITH …</code>) names an
+intermediate result up front; a <strong>subquery</strong> nests it inline. Same
+question, same answer, usually the same query plan — the difference is how a human
+reads it six months later.</p>
+
+<p><strong>The question</strong> (reusing the HbA1c readings from the window-functions
+page): which patients' <em>most recent</em> HbA1c exceeds 8.0?</p>
+
+<h2>As CTEs — read top to bottom</h2>
+<pre>WITH latest AS (
+  SELECT patient_id, MAX(reading_date) AS d
+  FROM a1c_readings GROUP BY patient_id
+),
+latest_vals AS (
+  SELECT r.patient_id, r.hba1c
+  FROM a1c_readings r
+  JOIN latest l ON r.patient_id = l.patient_id AND r.reading_date = l.d
+)
+SELECT patient_id, hba1c FROM latest_vals WHERE hba1c &gt; 8.0 ORDER BY patient_id;</pre>
+<table>
+<tr><th>patient_id</th><th>hba1c</th></tr>
+<tr><td>2</td><td class="num">8.8</td></tr>
+</table>
+
+<p><code>latest</code>: each patient's most recent reading date.
+<code>latest_vals</code>: the actual values on those dates. Then filter.
+Each step has a name; the query reads like a recipe.</p>
+
+<h2>As a subquery — read inside out</h2>
+<pre>SELECT r.patient_id, r.hba1c
+FROM a1c_readings r
+JOIN (SELECT patient_id, MAX(reading_date) AS d
+      FROM a1c_readings GROUP BY patient_id) l
+  ON r.patient_id = l.patient_id AND r.reading_date = l.d
+WHERE r.hba1c &gt; 8.0 ORDER BY r.patient_id;</pre>
+<table>
+<tr><th>patient_id</th><th>hba1c</th></tr>
+<tr><td>2</td><td class="num">8.8</td></tr>
+</table>
+
+<p>Identical result. But you parse it backwards: find the innermost query first,
+then work outward. Fine for one nesting — miserable at three.</p>
+<div class="watchout"><strong>Watch out.</strong><ul><li>Name CTEs after what they contain (<code>latest</code>, not <code>cte1</code>) — future-you will thank present-you.</li><li>A CTE is a <em>named subquery</em>, not a temp table: some engines re-evaluate it per reference. Fine at notes scale.</li><li>Reach for a CTE when a step deserves a name or gets reused; a one-off inline filter is fine as a subquery.</li><li>In old Postgres (&lt;12) CTEs were optimization fences — the planner couldn't flatten them. Rarely matters, good to know.</li></ul></div>
+
+<div class="proveit"><strong>Prove it.</strong> Every query on this page was run
+against SQLite and the tables show actual output — not hand-typed guesses.</div>
+</body></html>

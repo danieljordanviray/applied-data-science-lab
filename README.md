@@ -13,12 +13,15 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
   — Statistical Significance, Visualized: an interactive p-value & power playground
 - **Causal Inference → [difference-in-differences](causal-inference/difference-in-differences/)**
   — Difference-in-Differences, plus the staggered-timing version
+- **SQL → [sql](sql/)** — EXISTS vs IN/NOT IN, COALESCE/NULLIF, window functions,
+  date spines, CTEs: quick-reference notes with clinical toy examples
 
 ## Layout
 
 - `stats-and-prob/` — confidence intervals, t-tests, real-data reference studies
 - `experimentation/` — A/B testing lives here next
 - `causal-inference/` — difference-in-differences case studies
+- `sql/` — quick-reference SQL notes (EXISTS, COALESCE/NULLIF, windows, date spines, CTEs)
 - `machine-learning/` — saved for later in the track
 - `toolkit/` — the code bank: reusable, verified recipes. Currently `did.py`
   (`did_2x2`, `did_regression`, `placebo_did`, `plot_group_trends`). Nothing enters
