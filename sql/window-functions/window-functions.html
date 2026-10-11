@@ -119,24 +119,30 @@ sequence." The first row per patient has no previous row → <code>NULL</code>,
 honestly. <code>LEAD()</code> is the mirror image (next row).</p>
 
 <h2>Rolling 3-reading average, per patient</h2>
-<pre>SELECT patient_id, reading_date,
+<pre>SELECT patient_id, reading_date, hba1c,
        ROUND(AVG(hba1c) OVER (PARTITION BY patient_id ORDER BY reading_date
                               ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2)
-         AS rolling_avg_3
+         AS rolling_avg_3,
+       COUNT(*) OVER (PARTITION BY patient_id ORDER BY reading_date
+                      ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS n_in_avg
 FROM a1c_readings ORDER BY patient_id, reading_date;</pre>
 <table>
-<tr><th>patient_id</th><th>reading_date</th><th>rolling_avg_3</th></tr>
-<tr><td>1</td><td>2024-01-05</td><td class="num">8.2</td></tr>
-<tr><td>1</td><td>2024-04-02</td><td class="num">8.05</td></tr>
-<tr><td>1</td><td>2024-07-10</td><td class="num">8.0</td></tr>
-<tr><td>1</td><td>2024-10-01</td><td class="num">7.73</td></tr>
-<tr><td>2</td><td>2024-02-11</td><td class="num">9.1</td></tr>
-<tr><td>2</td><td>2024-05-20</td><td class="num">8.95</td></tr>
+<tr><th>patient_id</th><th>reading_date</th><th>hba1c</th><th>rolling_avg_3</th><th>n_in_avg</th></tr>
+<tr><td>1</td><td>2024-01-05</td><td class="num">8.2</td><td class="num">8.2</td><td>1</td></tr>
+<tr><td>1</td><td>2024-04-02</td><td class="num">7.9</td><td class="num">8.05</td><td>2</td></tr>
+<tr><td>1</td><td>2024-07-10</td><td class="num">7.9</td><td class="num">8.0</td><td>3</td></tr>
+<tr><td>1</td><td>2024-10-01</td><td class="num">7.4</td><td class="num">7.73</td><td>3</td></tr>
+<tr><td>2</td><td>2024-02-11</td><td class="num">9.1</td><td class="num">9.1</td><td>1</td></tr>
+<tr><td>2</td><td>2024-05-20</td><td class="num">8.8</td><td class="num">8.95</td><td>2</td></tr>
 </table>
 
 <p>The frame <code>ROWS BETWEEN 2 PRECEDING AND CURRENT ROW</code> is the whole
-trick: "this reading and the two before it." Early rows just average fewer
-readings — the frame has fewer rows to work with, no error.</p>
+trick: "this reading and the two before it." The <code>hba1c</code> column shows
+exactly which values went into each average, and <code>n_in_avg</code> makes the
+edge effect visible: the first reading averages just 1 value, the second averages
+2 — only from the third row on is it a true 3-reading average. The frame simply
+has fewer rows to work with early on; no error, but worth knowing when you read
+the first few values.</p>
 
 <h2>Running total of dose, per patient</h2>
 <pre>SELECT patient_id, admin_date,

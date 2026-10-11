@@ -316,13 +316,16 @@ FROM a1c_readings ORDER BY patient_id, reading_date;"""
 cols, r3 = run(q3)
 check("lag", [r[3] for r in r3], [None, -0.3, 0.0, -0.5, None, -0.3])
 
-q4 = """SELECT patient_id, reading_date,
+q4 = """SELECT patient_id, reading_date, hba1c,
        ROUND(AVG(hba1c) OVER (PARTITION BY patient_id ORDER BY reading_date
                               ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2)
-         AS rolling_avg_3
+         AS rolling_avg_3,
+       COUNT(*) OVER (PARTITION BY patient_id ORDER BY reading_date
+                      ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS n_in_avg
 FROM a1c_readings ORDER BY patient_id, reading_date;"""
 cols, r4 = run(q4)
-check("rolling avg", [r[2] for r in r4], [8.2, 8.05, 8.0, 7.73, 9.1, 8.95])
+check("rolling avg", [(r[3], r[4]) for r in r4],
+      [(8.2, 1), (8.05, 2), (8.0, 3), (7.73, 3), (9.1, 1), (8.95, 2)])
 
 q5 = """SELECT patient_id, admin_date,
        SUM(dose_mg) OVER (PARTITION BY patient_id ORDER BY admin_date
@@ -377,8 +380,12 @@ honestly. <code>LEAD()</code> is the mirror image (next row).</p>
 <pre>{escape(q4)}</pre>
 {table(*run(q4))}
 <p>The frame <code>ROWS BETWEEN 2 PRECEDING AND CURRENT ROW</code> is the whole
-trick: "this reading and the two before it." Early rows just average fewer
-readings — the frame has fewer rows to work with, no error.</p>
+trick: "this reading and the two before it." The <code>hba1c</code> column shows
+exactly which values went into each average, and <code>n_in_avg</code> makes the
+edge effect visible: the first reading averages just 1 value, the second averages
+2 — only from the third row on is it a true 3-reading average. The frame simply
+has fewer rows to work with early on; no error, but worth knowing when you read
+the first few values.</p>
 
 <h2>Running total of dose, per patient</h2>
 <pre>{escape(q5)}</pre>
