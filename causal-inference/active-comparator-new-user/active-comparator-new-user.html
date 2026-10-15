@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     <link rel="icon" href="data:," />
     <title>Active-comparator, new-user cohort study analyzed with difference-in-differences using medical claims data: Does Ozempic lower the cost of obesity care?</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
     <style>
       :root {
+        color-scheme: light;
         --bg: #f4f4f1;
         --surface: #ffffff;
         --surface-2: #eceee9;
@@ -31,30 +32,6 @@
         --avg-bg: #ffe1a1;
         --avg-line: #c98f06;
         --shadow: 0 1px 2px rgba(20, 35, 45, 0.06), 0 8px 24px rgba(20, 35, 45, 0.05);
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #11171c;
-          --surface: #1a232b;
-          --surface-2: #232f39;
-          --ink: #e9eef0;
-          --muted: #a3b3bc;
-          --faint: #71828c;
-          --line: #33424d;
-          --teal: #45c4ad;
-          --teal-soft: rgba(69, 196, 173, 0.13);
-          --ochre: #e2ac4c;
-          --ochre-soft: rgba(226, 172, 76, 0.13);
-          --expected: #8fa1ab;
-          --term: #93b4ff;
-          --term-soft: rgba(147, 180, 255, 0.13);
-          --accent: #45c4ad;
-          --warn-bg: #2b2517;
-          --warn-line: #6b5a24;
-          --avg-bg: #6e5510;
-          --avg-line: #e2ac4c;
-          --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25);
-        }
       }
       * { box-sizing: border-box; }
       html { -webkit-text-size-adjust: 100%; }
@@ -118,9 +95,7 @@
       }
       .btn:hover { border-color: var(--faint); }
       .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-      @media (prefers-color-scheme: dark) { .btn.primary { color: #0c1512; } }
       .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-      @media (prefers-color-scheme: dark) { .btn[aria-pressed="true"] { color: #0c1512; } }
       .btn:disabled { opacity: 0.55; cursor: default; }
       .chip {
         display: inline-block; background: var(--surface-2); border: 1px solid var(--line);
@@ -149,7 +124,6 @@
       .tl-block { flex: 1; border-radius: 6px; padding: 10px 4px; text-align: center; font-size: 12.5px; font-weight: 600; line-height: 1.35; }
       .tl-pre { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
       .tl-index { background: var(--accent); color: #fff; flex: 0 0 15%; }
-      @media (prefers-color-scheme: dark) { .tl-index { color: #0c1512; } }
       .tl-post { background: var(--teal-soft); color: var(--ink); border: 1px solid var(--line); }
       .tl-block .big { display: block; font-size: 15px; }
       @media (max-width: 560px) { .tl-block { font-size: 11px; padding: 8px 2px; } .tl-block .big { font-size: 13px; } }
@@ -214,7 +188,6 @@
       table.members tr.didrow td {
         background: var(--accent); color: #fff; font-weight: 700; border-bottom: none;
       }
-      @media (prefers-color-scheme: dark) { table.members tr.didrow td { color: #0c1512; } }
       table.monthly tr.fillrow td {
         text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
         text-transform: uppercase; color: var(--accent); background: var(--surface-2); padding: 6px 8px;
@@ -240,7 +213,6 @@
       .did-grid .cell.lit-oz { border-color: var(--teal); background: var(--teal-soft); }
       .did-grid .cell.lit-gen { border-color: var(--ochre); background: var(--ochre-soft); }
       .did-grid .cell.lit-final { border-color: var(--accent); background: var(--accent); color: #fff; }
-      @media (prefers-color-scheme: dark) { .did-grid .cell.lit-final { color: #0c1512; } }
       .did-grid .cell.lit-final small { color: inherit; opacity: 0.75; }
       .did-eq { font-family: "IBM Plex Mono", monospace; font-size: clamp(14.5px, 3.2vw, 17.5px); margin-top: 16px; min-height: 3.4em; }
       .did-eq .line { opacity: 0; transform: translateY(4px); transition: opacity 0.3s, transform 0.3s; padding: 3px 0; }
@@ -268,7 +240,7 @@
       <header>
         <div class="part-label">Applied Data Science Lab · Causal Inference</div>
         <h1>Active-comparator, new-user cohort study analyzed with difference-in-differences using medical claims data: Does Ozempic lower the cost of obesity care?</h1>
-        <p class="lede">A high-level summary of the study we&rsquo;re proposing: what we want to find out, and the closest honest version we can run with the data we actually have &mdash; insurance claims. A small made-up example with six members runs through the whole page, so every idea can be checked by hand.</p>
+        <p class="lede">Does Ozempic lower the cost of obesity care? A claims-only study design explained end to end</p>
         <div class="question-box">
           <div class="q-label">The question</div>
           <p>For members with obesity, does starting <strong>Ozempic</strong> reduce their <strong>total cost of obesity-related care</strong> more than starting a <strong>different weight-loss drug</strong>?</p>
