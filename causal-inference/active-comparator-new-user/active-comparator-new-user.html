@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Active-comparator, new-user cohort study analyzed with difference-in-differences using medical claims data: Does Ozempic lower the cost of obesity care?</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #f4f4f1;
+        --surface: #ffffff;
+        --surface-2: #eceee9;
+        --ink: #1d2a33;
+        --muted: #5a6a73;
+        --faint: #84939c;
+        --line: #d9ddd6;
+        --teal: #0e7565;
+        --teal-soft: rgba(14, 117, 101, 0.10);
+        --ochre: #96690f;
+        --ochre-soft: rgba(150, 105, 15, 0.10);
+        --expected: #84939c;
+        --term: #2b4fc0;
+        --term-soft: rgba(43, 79, 192, 0.09);
+        --accent: #0e7565;
+        --warn-bg: #fdf6e3;
+        --warn-line: #e3cf8f;
+        --avg-bg: #ffe1a1;
+        --avg-line: #c98f06;
+        --shadow: 0 1px 2px rgba(20, 35, 45, 0.06), 0 8px 24px rgba(20, 35, 45, 0.05);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #11171c;
+          --surface: #1a232b;
+          --surface-2: #232f39;
+          --ink: #e9eef0;
+          --muted: #a3b3bc;
+          --faint: #71828c;
+          --line: #33424d;
+          --teal: #45c4ad;
+          --teal-soft: rgba(69, 196, 173, 0.13);
+          --ochre: #e2ac4c;
+          --ochre-soft: rgba(226, 172, 76, 0.13);
+          --expected: #8fa1ab;
+          --term: #93b4ff;
+          --term-soft: rgba(147, 180, 255, 0.13);
+          --accent: #45c4ad;
+          --warn-bg: #2b2517;
+          --warn-line: #6b5a24;
+          --avg-bg: #6e5510;
+          --avg-line: #e2ac4c;
+          --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25);
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Public Sans", system-ui, -apple-system, sans-serif;
+        font-size: 16.5px;
+        line-height: 1.6;
+      }
+      .wrap { max-width: 880px; margin: 0 auto; padding: 40px 20px 72px; }
+      h1, h2, h3 { font-family: "Source Serif 4", Georgia, serif; line-height: 1.2; margin: 0; }
+      h1 { font-size: clamp(27px, 4.4vw, 37px); font-weight: 700; letter-spacing: -0.01em; }
+      h2 { font-size: clamp(23px, 3.6vw, 29px); font-weight: 700; margin-bottom: 10px; }
+      h3 { font-size: 19px; font-weight: 600; }
+      p { margin: 0 0 14px; }
+      .lede { font-size: 19px; color: var(--muted); margin-top: 14px; max-width: 42em; }
+      .part-label {
+        font-size: 12.5px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+        color: var(--accent); margin-bottom: 8px;
+      }
+      section { margin-top: 52px; }
+      section:first-of-type { margin-top: 40px; }
+      .card {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+        padding: 22px 24px; box-shadow: var(--shadow);
+      }
+      .question-box {
+        border-left: 4px solid var(--accent);
+        background: var(--surface); border-top: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+        border-radius: 0 10px 10px 0; padding: 20px 24px; margin-top: 28px; box-shadow: var(--shadow);
+      }
+      .question-box p { margin: 0; font-size: 18.5px; }
+      .question-box .q-label { font-size: 12.5px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+      .answer-strip {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px;
+      }
+      .answer-strip .cell { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; }
+      .answer-strip .k { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 3px; }
+      .answer-strip .v { font-weight: 600; font-size: 15.5px; line-height: 1.4; display: block; }
+      @media (max-width: 620px) { .answer-strip { grid-template-columns: 1fr; } }
+
+      /* Steps */
+      .steps { list-style: none; margin: 18px 0 0; padding: 0; counter-reset: step; }
+      .steps li { display: flex; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); }
+      .steps li:first-child { border-top: none; padding-top: 4px; }
+      .stepnum {
+        flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+        background: var(--teal-soft); color: var(--accent); font-weight: 700; font-size: 16px;
+        display: flex; align-items: center; justify-content: center; margin-top: 2px;
+      }
+      .steps .st { font-weight: 700; display: block; margin-bottom: 2px; }
+      .steps p { margin: 0; color: var(--muted); font-size: 15.5px; }
+      .steps p strong, .steps .st { color: var(--ink); }
+
+      .btn {
+        appearance: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+        font: inherit; font-size: 14.5px; font-weight: 600; border-radius: 8px;
+        padding: 9px 16px; cursor: pointer;
+      }
+      .btn:hover { border-color: var(--faint); }
+      .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      @media (prefers-color-scheme: dark) { .btn.primary { color: #0c1512; } }
+      .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+      @media (prefers-color-scheme: dark) { .btn[aria-pressed="true"] { color: #0c1512; } }
+      .btn:disabled { opacity: 0.55; cursor: default; }
+      .chip {
+        display: inline-block; background: var(--surface-2); border: 1px solid var(--line);
+        border-radius: 999px; padding: 3px 11px; font-size: 13.5px; font-weight: 600; margin: 0 5px 6px 0;
+      }
+
+      /* Claim card mock */
+      .claim {
+        font-family: "IBM Plex Mono", monospace; font-size: 14px;
+        border: 1px dashed var(--faint); border-radius: 8px; padding: 16px 18px; background: var(--surface);
+      }
+      .claim .row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px dotted var(--line); flex-wrap: wrap; }
+      .claim .row:last-child { border-bottom: none; }
+      .claim .fk { color: var(--muted); }
+      .claim .fv { font-weight: 600; text-align: right; }
+      .claim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+      @media (max-width: 680px) { .claim-grid { grid-template-columns: 1fr; } }
+      .fact-list { margin: 0; padding: 0; list-style: none; }
+      .fact-list li { padding: 9px 0 9px 26px; position: relative; border-top: 1px solid var(--line); font-size: 15.5px; }
+      .fact-list li:first-child { border-top: none; padding-top: 2px; }
+      .fact-list li::before { content: ""; position: absolute; left: 2px; top: 17px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+      .fact-list li:first-child::before { top: 9px; }
+
+      /* Timeline */
+      .timeline { display: flex; gap: 4px; margin: 18px 0 6px; }
+      .tl-block { flex: 1; border-radius: 6px; padding: 10px 4px; text-align: center; font-size: 12.5px; font-weight: 600; line-height: 1.35; }
+      .tl-pre { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+      .tl-index { background: var(--accent); color: #fff; flex: 0 0 15%; }
+      @media (prefers-color-scheme: dark) { .tl-index { color: #0c1512; } }
+      .tl-post { background: var(--teal-soft); color: var(--ink); border: 1px solid var(--line); }
+      .tl-block .big { display: block; font-size: 15px; }
+      @media (max-width: 560px) { .tl-block { font-size: 11px; padding: 8px 2px; } .tl-block .big { font-size: 13px; } }
+
+      /* Chart */
+      .chart-controls { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 4px; align-items: center; }
+      .chart-controls .ctl-label { font-size: 13px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+      .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; margin: 10px 0 2px; }
+      .legend .li { display: flex; align-items: center; gap: 7px; }
+      .swatch { width: 26px; height: 0; border-top: 3.5px solid; border-radius: 2px; }
+      .swatch.dashed { border-top-style: dashed; border-top-width: 2.5px; }
+      svg.chart { width: 100%; height: auto; display: block; }
+      svg.chart text { font-family: "Public Sans", sans-serif; }
+      .member-pick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+      .member-pick .btn { padding: 6px 13px; font-size: 13.5px; border-radius: 999px; }
+      .callout {
+        background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+        padding: 14px 18px; font-size: 15.5px; margin-top: 16px;
+      }
+      .callout p { margin: 0; }
+      .term { color: var(--term); font-weight: 600; font-size: 0.93em; }
+      .name-box {
+        border: 1px solid var(--term); background: var(--term-soft); border-radius: 8px;
+        padding: 14px 18px; font-size: 15.5px; margin-top: 16px;
+      }
+      .name-box p { margin: 0; }
+
+      /* Members table */
+      table.members { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 8px; }
+      table.members th, table.members td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+      table.members th { font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+      table.members th:first-child, table.members td:first-child { text-align: left; }
+      table.members td.num, table.members th.num { font-family: "IBM Plex Mono", monospace; font-size: 14px; }
+      table.members tr.hl td { background: var(--teal-soft); }
+      table.members tr.grp td { font-weight: 700; background: var(--surface-2); }
+      .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-left: 8px; vertical-align: 1px; }
+      .tag.oz { background: var(--teal-soft); color: var(--teal); }
+      .tag.gen { background: var(--ochre-soft); color: var(--ochre); }
+      .down { color: var(--teal); font-weight: 600; }
+      @media (max-width: 560px) {
+        table.members th, table.members td { padding: 8px 6px; }
+        table.members { font-size: 14px; }
+        .tag { margin-left: 4px; padding: 1px 7px; }
+      }
+
+      /* Monthly member-by-month tables */
+      .stephead { margin-top: 32px; margin-bottom: 8px; }
+      .grouphead { margin-top: 22px; margin-bottom: 2px; font-size: 16.5px; }
+      table.monthly { font-size: 14px; }
+      table.monthly th, table.monthly td { padding: 7px 8px; }
+      table.monthly td.num, table.monthly th.num { font-size: 13px; }
+      table.monthly .plotcol { font-weight: 700; }
+      table.oz-table .plotcol { background: var(--teal-soft); }
+      table.gen-table .plotcol { background: var(--ochre-soft); }
+      table.oz-table tr.grp td.plotcol { background: var(--teal-soft); }
+      table.gen-table tr.grp td.plotcol { background: var(--ochre-soft); }
+      table.monthly tr.avgrow td {
+        background: var(--avg-bg); font-weight: 700;
+        border-top: 2px solid var(--avg-line); border-bottom: 2px solid var(--avg-line);
+      }
+      table.monthly tr.avgrow td.plotcol { background: var(--avg-bg); }
+      table.members tr.didrow td {
+        background: var(--accent); color: #fff; font-weight: 700; border-bottom: none;
+      }
+      @media (prefers-color-scheme: dark) { table.members tr.didrow td { color: #0c1512; } }
+      table.monthly tr.fillrow td {
+        text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--accent); background: var(--surface-2); padding: 6px 8px;
+      }
+      .tbl-note { font-size: 14.5px; color: var(--muted); margin-top: 10px; }
+      .tbl-note strong { color: var(--ink); }
+      @media (max-width: 560px) {
+        table.monthly th, table.monthly td { padding: 6px 4px; }
+        table.monthly td.num, table.monthly th.num { font-size: 12px; }
+      }
+
+      /* DiD stepper */
+      .did-grid { display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 8px; margin-top: 16px; align-items: stretch; }
+      .did-grid .h { font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; padding: 4px 6px; }
+      .did-grid .cell {
+        border: 1.5px solid var(--line); border-radius: 8px; padding: 12px 8px; text-align: center;
+        font-family: "IBM Plex Mono", monospace; font-size: clamp(16px, 3.4vw, 21px); font-weight: 600;
+        display: flex; align-items: center; justify-content: center; transition: border-color 0.25s, background 0.25s;
+      }
+      .did-grid .cell small { display: block; font-family: "Public Sans", sans-serif; font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+      .did-grid .cell .inner { text-align: center; }
+      .did-grid .rowlabel { font-weight: 700; font-size: 14.5px; display: flex; align-items: center; padding-right: 4px; }
+      .did-grid .cell.lit-oz { border-color: var(--teal); background: var(--teal-soft); }
+      .did-grid .cell.lit-gen { border-color: var(--ochre); background: var(--ochre-soft); }
+      .did-grid .cell.lit-final { border-color: var(--accent); background: var(--accent); color: #fff; }
+      @media (prefers-color-scheme: dark) { .did-grid .cell.lit-final { color: #0c1512; } }
+      .did-grid .cell.lit-final small { color: inherit; opacity: 0.75; }
+      .did-eq { font-family: "IBM Plex Mono", monospace; font-size: clamp(14.5px, 3.2vw, 17.5px); margin-top: 16px; min-height: 3.4em; }
+      .did-eq .line { opacity: 0; transform: translateY(4px); transition: opacity 0.3s, transform 0.3s; padding: 3px 0; }
+      .did-eq .line.on { opacity: 1; transform: none; }
+      @media (prefers-reduced-motion: reduce) { .did-eq .line { transition: none; } }
+      .did-eq .res { font-weight: 600; }
+      .step-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+      .limits { margin: 0; padding-left: 20px; }
+      .limits li { margin-bottom: 10px; }
+      .limits li::marker { color: var(--accent); font-weight: 700; }
+      .bottom-line {
+        background: var(--ink); color: var(--bg); border-radius: 10px; padding: 24px 26px; margin-top: 52px;
+      }
+      .bottom-line h2 { color: inherit; }
+      .bottom-line p { font-size: 18px; margin: 0; }
+      .bottom-line .next { margin-top: 14px; font-size: 15px; opacity: 0.85; }
+      .fineprint { font-size: 13.5px; color: var(--faint); margin-top: 22px; text-align: center; }
+      strong.num { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.94em; }
+    </style>
+  </head>
+  <body>
+<div style="max-width:880px;margin:0 auto;padding:18px 20px 0;font-family:'Public Sans',system-ui,sans-serif;font-size:.92rem;"><a href="../../docs/index.html" style="color:#0e7565;text-decoration:none;">&larr; Homepage</a></div>
+    <main class="wrap">
+      <header>
+        <div class="part-label">Applied Data Science Lab · Causal Inference</div>
+        <h1>Active-comparator, new-user cohort study analyzed with difference-in-differences using medical claims data: Does Ozempic lower the cost of obesity care?</h1>
+        <p class="lede">A high-level summary of the study we&rsquo;re proposing: what we want to find out, and the closest honest version we can run with the data we actually have &mdash; insurance claims. A small made-up example with six members runs through the whole page, so every idea can be checked by hand.</p>
+        <div class="question-box">
+          <div class="q-label">The question</div>
+          <p>For members with obesity, does starting <strong>Ozempic</strong> reduce their <strong>total cost of obesity-related care</strong> more than starting a <strong>different weight-loss drug</strong>?</p>
+          <div class="answer-strip">
+            <div class="cell"><span class="k">Who</span><span class="v">Members with an obesity diagnosis code on their claims</span></div>
+            <div class="cell"><span class="k">Compared</span><span class="v">Ozempic starters vs. starters of another weight-loss drug</span></div>
+            <div class="cell"><span class="k">Measured</span><span class="v">Obesity-related cost of care, 6 months before vs. 6 months after starting</span></div>
+          </div>
+        </div>
+      </header>
+
+
+      <section aria-labelledby="claims-h">
+        <div class="part-label">Part 1 · What we actually have</div>
+        <h2 id="claims-h">Our data: claims, and only claims</h2>
+        <p>Every time a member gets care, a claim is submitted so the provider gets paid. A claim can&rsquo;t tell us everything &mdash; but it tells us the few things this study needs:</p>
+        <div class="claim-grid">
+          <div class="claim" role="img" aria-label="Example claim showing member, date, diagnosis code for obesity, the drug filled, and the amount paid">
+            <div class="row"><span class="fk">Member</span><span class="fv">M. Rivera</span></div>
+            <div class="row"><span class="fk">Date of service</span><span class="fv">Mar 10</span></div>
+            <div class="row"><span class="fk">Diagnosis code (why)</span><span class="fv">E66 &mdash; obesity</span></div>
+            <div class="row"><span class="fk">Procedure / drug (what)</span><span class="fv">Ozempic, first fill</span></div>
+            <div class="row"><span class="fk">Amount paid (cost)</span><span class="fv">$842</span></div>
+          </div>
+          <ul class="fact-list">
+            <li><strong>Who has obesity:</strong> an obesity diagnosis code <span class="term">[ICD-10 diagnosis code]</span> appears on their claims. (This finds members whose obesity was coded during care &mdash; it can&rsquo;t find members who never had it written on a claim.)</li>
+            <li><strong>Who started which drug, and when:</strong> the first pharmacy claim for Ozempic or for another weight-loss drug. That date is each member&rsquo;s starting line <span class="term">[index date]</span>.</li>
+            <li><strong>What care cost:</strong> the paid amounts on all their obesity-related claims, month by month.</li>
+            <li><strong>A quiet month means $0, not &ldquo;missing&rdquo;:</strong> enrollment records confirm the member was covered, so a month with no obesity claims is a month that genuinely cost nothing.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section aria-labelledby="plan-h">
+        <div class="part-label">Part 2 · The plan</div>
+        <h2 id="plan-h">What we&rsquo;ll do instead: rebuild the ideal trial from claims</h2>
+        <p>In real life, nobody was assigned a drug at random &mdash; so instead of comparing Ozempic users to everyone else (which would mix up the drug with the kind of person who gets it), we compare them to the fairest group claims can give us: <strong>people who also started a weight-loss drug, just a different one</strong>. Both groups were in the same situation at the same kind of moment. Then we compare how each group&rsquo;s costs <em>changed</em>.</p>
+        <div class="name-box">
+          <p><strong>What this design is called:</strong> a <strong>target trial emulation</strong> <span class="term">[target trial emulation]</span> &mdash; we write down the head-to-head trial we wish we could run, then rebuild each piece of it from claims. The comparison group is an <strong>active comparator</strong> made of <strong>new users</strong> <span class="term">[active-comparator, new-user design]</span>, and the arithmetic that produces the answer is <strong>difference-in-differences</strong> <span class="term">[difference-in-differences &middot; DiD]</span>. Those are the names to use when searching the literature or talking with other researchers.</p>
+        </div>
+        <ol class="steps">
+          <li><span class="stepnum">1</span><div><span class="st">Find the members</span><p>Pull members who have an obesity diagnosis code on their claims and who started a weight-loss drug.</p></div></li>
+          <li><span class="stepnum">2</span><div><span class="st">Split into two groups by what they started</span><p><strong>Group A:</strong> first fill was Ozempic. <strong>Group B:</strong> first fill was another weight-loss drug. Everyone in the study started <em>something</em> &mdash; nobody is compared against &ldquo;doing nothing&rdquo; <span class="term">[active comparator]</span>.</p></div></li>
+          <li><span class="stepnum">3</span><div><span class="st">Line everyone up at their own starting line</span><p>Members start in different calendar months, so we line them up by time relative to their first fill &mdash; month 0 &mdash; not by calendar date <span class="term">[time zero &middot; relative-time alignment]</span>.</p></div></li>
+          <li><span class="stepnum">4</span><div><span class="st">Add up obesity-related costs, 6 months before and 6 months after</span><p>For each member, total the paid amounts on their obesity-related claims in each month. Covered months with no claims count as $0.</p></div></li>
+          <li><span class="stepnum">5</span><div><span class="st">Compare the changes, not the end points</span><p>Each group is first compared to <em>its own</em> past. Then we compare the two changes. Whatever pushed both groups&rsquo; costs around equally &mdash; price inflation, the drugs helping in general &mdash; cancels out, leaving the extra effect of Ozempic <span class="term">[difference-in-differences]</span>.</p></div></li>
+        </ol>
+        <div class="timeline" role="img" aria-label="Timeline: six months before the first prescription fill, the fill itself at month zero, then six months after">
+          <div class="tl-block tl-pre"><span class="big">Months &minus;6 to &minus;1</span>BEFORE &mdash; each group&rsquo;s starting point</div>
+          <div class="tl-block tl-index"><span class="big">Month 0</span>FIRST FILL</div>
+          <div class="tl-block tl-post"><span class="big">Months +1 to +6</span>AFTER &mdash; did costs fall, and by how much?</div>
+        </div>
+      </section>
+
+      <section aria-labelledby="toy-h">
+        <div class="part-label">Part 3 · A toy example</div>
+        <h2 id="toy-h">Six members, worked end to end</h2>
+        <p>Here is the whole study in miniature, with made-up numbers small enough to check on paper. Three members started Ozempic, three started another weight-loss drug; all six have an obesity diagnosis code. The numbers are built in two steps &mdash; and each step is exactly what you would do with a real claims extract:</p>
+        <p><strong>Step 1</strong> &mdash; get every member&rsquo;s cost in every month; add each month up within a group to get the group&rsquo;s total; then divide by the number of members to get the <strong>average cost per member</strong>. That last column is what the chart plots. Two highlighted rows summarize each period: the <strong>Before average</strong>, right after month &minus;1, and the <strong>After average</strong>, right after month +6.<br />
+        <strong>Step 2</strong> &mdash; average the members within each group. That produces four group numbers &mdash; a before and an after for each group &mdash; and comparing the two groups&rsquo; changes gives the study&rsquo;s answer, worked in full right below the table.</p>
+
+        <h3 class="stephead">Step 1 &middot; Every member, every month</h3>
+        <p>From the claims, take each member and add up the paid amounts on all their obesity-related claims within each month, with months lined up relative to their first fill &mdash; one cost figure per member per month <span class="term">[member-month panel]</span>. A month when an enrolled member filed no obesity claims counts as $0: it adds zero to the total, and the member still counts in the divisor. All figures are dollars of obesity-related cost for that month.</p>
+
+        <h3 class="grouphead" style="color:var(--teal);">Ozempic group &mdash; monthly cost by member</h3>
+        <table class="members monthly oz-table" id="ozMonthly">
+          <thead>
+            <tr><th scope="col">Month</th><th scope="col" class="num">Maria</th><th scope="col" class="num">James</th><th scope="col" class="num">Priya</th><th scope="col" class="num">Group total<br />(all 3 members)</th><th scope="col" class="num plotcol">Average<br />per member</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h3 class="grouphead" style="color:var(--ochre);">Other-drug group &mdash; monthly cost by member</h3>
+        <table class="members monthly gen-table" id="genMonthly">
+          <thead>
+            <tr><th scope="col">Month</th><th scope="col" class="num">Tom</th><th scope="col" class="num">Alicia</th><th scope="col" class="num">David</th><th scope="col" class="num">Group total<br />(all 3 members)</th><th scope="col" class="num plotcol">Average<br />per member</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="tbl-note">Read each table top to bottom: one row per month. The <strong>group total</strong> column is every member&rsquo;s cost for that month added together. The shaded <strong>average per member</strong> column <span class="term">[per member per month &middot; PMPM]</span> is that total divided by the number of members &mdash; and it is exactly what the chart below plots, month by month, one point per row. Check the first row by hand: in month &minus;6 the Ozempic members cost $940 + $840 + $740 = <strong>$2,520 in total</strong>, and $2,520 &divide; 3 members = <strong>$840 per member</strong> &mdash; the first point on the teal line.</p>
+
+        <h3 class="stephead">Step 2 &middot; Average each group &mdash; then compare the changes</h3>
+        <p>Average the three members in each group, and the twelve monthly figures collapse into four numbers: a before average and an after average for each group. These are the same figures as the highlighted Before average and After average rows in the Step 1 tables. The third row is the study&rsquo;s answer &mdash; the difference between the two groups&rsquo; changes <span class="term">[difference-in-differences]</span>:</p>
+        <table class="members" id="memberTable">
+          <thead>
+            <tr><th scope="col">Group</th><th scope="col" class="num">Before<br />(avg per month)</th><th scope="col" class="num">After<br />(avg per month)</th><th scope="col" class="num">Change</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h3 class="stephead">The arithmetic, step by step</h3>
+        <p>No model, no black box &mdash; the headline number in that last row comes from comparing each group to its own past, then comparing those two changes. The only inputs are the four group averages in the Step 2 table: Ozempic $900 before and $630 after; other drug $700 before and $550 after. You land on the same four numbers from the Step 1 tables, too &mdash; average the six monthly &ldquo;average per member&rdquo; points inside the before window and you get the same $900. Walk through it:</p>
+        <div class="card">
+          <div class="did-grid" id="didGrid">
+            <div></div>
+            <div class="h" style="justify-content:center;">Before</div>
+            <div class="h" style="justify-content:center;">After</div>
+            <div class="h" style="justify-content:center;">Change</div>
+            <div class="rowlabel" style="color:var(--teal);">Ozempic</div>
+            <div class="cell oz" data-cell="oz-before"><span class="inner"><small>per month</small>$900</span></div>
+            <div class="cell oz" data-cell="oz-after"><span class="inner"><small>per month</small>$630</span></div>
+            <div class="cell" data-cell="oz-change"><span class="inner"><small>change</small>&minus;$270</span></div>
+            <div class="rowlabel" style="color:var(--ochre);">Other drug</div>
+            <div class="cell gen" data-cell="gen-before"><span class="inner"><small>per month</small>$700</span></div>
+            <div class="cell gen" data-cell="gen-after"><span class="inner"><small>per month</small>$550</span></div>
+            <div class="cell" data-cell="gen-change"><span class="inner"><small>change</small>&minus;$150</span></div>
+            <div class="rowlabel">Difference</div>
+            <div class="cell" style="border-style:dashed; color:var(--faint);">&mdash;</div>
+            <div class="cell" style="border-style:dashed; color:var(--faint);">&mdash;</div>
+            <div class="cell" data-cell="final"><span class="inner"><small>extra saving</small>?</span></div>
+          </div>
+          <div class="step-btns">
+            <button class="btn" id="didStep1" type="button">Step 1 · Ozempic&rsquo;s change</button>
+            <button class="btn" id="didStep2" type="button">Step 2 · Other drug&rsquo;s change</button>
+            <button class="btn" id="didStep3" type="button">Step 3 · Compare the changes</button>
+            <button class="btn" id="didReset" type="button">Start over</button>
+          </div>
+          <div class="did-eq" id="didEq" aria-live="polite">
+            <div class="line" data-line="1">Ozempic group: &nbsp;$630 &minus; $900 = <span class="res">&minus;$270 a month</span> &mdash; their costs fell $270.</div>
+            <div class="line" data-line="2">Other-drug group: &nbsp;$550 &minus; $700 = <span class="res">&minus;$150 a month</span> &mdash; their costs fell $150.</div>
+            <div class="line" data-line="3">Difference of the changes: &nbsp;&minus;$270 &minus; (&minus;$150) = <span class="res">&minus;$120 a month</span> &mdash; in this example, starting Ozempic is associated with <strong>$120 more saved per member, per month</strong> than starting the other drug.</div>
+          </div>
+        </div>
+        <p style="margin-top:16px;">The dashed &ldquo;expected&rdquo; line on the chart below is this same subtraction drawn as a picture <span class="term">[counterfactual]</span>: it traces where the Ozempic group&rsquo;s costs would have landed if they had fallen only as much as the other drug&rsquo;s did. Two pairs of numbers describe it, and they look inconsistent until you see what each one measures:</p>
+        <ul class="limits" style="margin-bottom:14px;">
+          <li><strong>The lines end at the final month.</strong> Read the last point of each line and you get $570 (actual Ozempic) vs. $690 (expected) &mdash; that&rsquo;s where the chart&rsquo;s end labels come from.</li>
+          <li><strong>The subtraction uses the average of all six &ldquo;after&rdquo; months.</strong> Averaged over the whole after period, Ozempic landed at $630 vs. $750 expected. We use the average because a single month is noisy &mdash; one expensive claim can move it &mdash; and the study&rsquo;s answer shouldn&rsquo;t hinge on one month.</li>
+        </ul>
+        <p>Both views tell the same story: the gap between actual and expected is <strong>$120 a month</strong> either way. And because that gap is the same in every after month, each labeled point on the dashed line sits exactly $120 above the Ozempic group&rsquo;s actual cost that month. That gap is the number the whole study exists to estimate.</p>
+        <p style="font-size:14.5px; color:var(--muted);">The chart is Step 1 drawn as lines: it plots the shaded &ldquo;average per member&rdquo; column for both groups across all twelve months, so you can see the month-by-month trends that the four summary numbers compress.</p>
+
+        <div class="card" style="margin-top:18px;">
+          <h3>Monthly obesity-related cost &mdash; group averages</h3>
+          <p style="font-size:14.5px; color:var(--muted); margin:6px 0 2px;">Every point on these lines is one month&rsquo;s <strong>average per member</strong> figure &mdash; the shaded last column of the Step 1 tables above. The teal line is the Ozempic group&rsquo;s column; the ochre line is the other-drug group&rsquo;s column. The dashed line is the Ozempic group&rsquo;s <strong>expected</strong> path <span class="term">[counterfactual]</span> &mdash; every one of its after-period points is labeled, and each sits exactly <strong>$120 above</strong> the Ozempic group&rsquo;s actual cost that month: the extra fall the subtraction attributes to Ozempic.</p>
+          <div class="legend">
+            <span class="li"><span class="swatch" style="border-color:var(--teal);"></span>Ozempic group (average)</span>
+            <span class="li"><span class="swatch" style="border-color:var(--ochre);"></span>Other-drug group (average)</span>
+            <span class="li" id="legendExpected"><span class="swatch dashed" style="border-color:var(--expected);"></span>Expected Ozempic path if it had only matched the other drug</span>
+          </div>
+          <svg class="chart" id="chart" viewBox="0 0 720 430" role="img" aria-label="Line chart of average monthly obesity-related cost for the two groups, six months before and six months after starting their drug"></svg>
+          <div class="chart-controls">
+            <span class="ctl-label">Show</span>
+            <button class="btn" id="toggleExpected" type="button" aria-pressed="true">&ldquo;Expected&rdquo; line for Ozempic</button>
+          </div>
+          <div class="callout">
+            <p><strong>Read the chart the way the study does.</strong> The two groups don&rsquo;t start at the same place &mdash; Ozempic starters were already costlier ($900 vs. $700 a month), probably because costlier, more complex members are the ones who get the newer drug. So comparing only the &ldquo;after&rdquo; numbers ($630 vs. $550) would be rigged. Instead, look at the <em>drop</em>: both groups fall (the other drug helps too), but the Ozempic group falls further. That extra fall is the answer to our question.</p>
+          </div>
+        </div>
+
+        <h3 class="stephead">Doing this with real claims data</h3>
+        <ul class="limits">
+          <li><strong>The divisor changes month to month.</strong> In the toy example each group always has 3 members. In real data, divide each month&rsquo;s group total by the number of members who were enrolled and in the study <em>that month</em> &mdash; that is why every figure in this method is expressed as an average per member <span class="term">[per member per month &middot; PMPM]</span>, never as a raw group total.</li>
+          <li><strong>Zero-claim months stay in.</strong> A member who was enrolled but filed no obesity-related claim in a month contributes $0 to that month&rsquo;s total and still counts in the divisor. Dropping quiet months would inflate every average and break the comparison.</li>
+          <li><strong>Decide the leaving rule before you start.</strong> Members disenroll mid-window. Pick one rule &mdash; for example, require enrollment for the full twelve months, or include each member for the months they were enrolled &mdash; and apply it identically to both groups, because disenrollment is rarely random.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="trust-h">
+        <div class="part-label">Part 4 · Honest limits</div>
+        <h2 id="trust-h">What would make us trust &mdash; or doubt &mdash; the answer</h2>
+        <h3 style="margin-top:4px;">1 &middot; The before picture has to look fair <span class="term">[parallel trends]</span></h3>
+        <p>The whole method rests on one bet: if the two groups&rsquo; costs were already moving together in the six &ldquo;before&rdquo; months (as they do in the chart above), it&rsquo;s reasonable to believe they would have kept moving together after month 0 if everything else were equal. If they were already drifting apart before anyone took anything, we stop &mdash; the comparison isn&rsquo;t fair and no arithmetic fixes it. Here is how that fairness gets checked, not just eyeballed:</p>
+        <ul class="limits">
+          <li><strong>Plot every before-month separately</strong> <span class="term">[event study]</span> &mdash; six points per group before month 0, not one averaged slope. The gap between the two lines should look flat across those months, not steadily widening or narrowing.</li>
+          <li><strong>Test the before-slopes against each other</strong> <span class="term">[pre-trends test]</span> &mdash; fit each group&rsquo;s before-period trend and check whether the two slopes differ by more than ordinary month-to-month noise would explain.</li>
+          <li><strong>Put a range on any unfairness &mdash; don&rsquo;t just pass or fail it</strong> <span class="term">[equivalence check]</span>. &ldquo;No significant difference&rdquo; on its own is weak evidence. What we actually report is a range for the slope gap <span class="term">[confidence interval]</span>, and the check is whether even the worst end of that range is small next to the effect we&rsquo;re claiming &mdash; here, $120 a month.</li>
+          <li><strong>Run a fake version of the study</strong> <span class="term">[placebo test]</span> &mdash; pretend everyone started six months earlier than they really did and rerun the same arithmetic on before-period data only. A fair design should find an &ldquo;effect&rdquo; of about $0. If it finds one, the comparison was never fair to begin with.</li>
+        </ul>
+        <h3 style="margin-top:28px;">2 &middot; The groups start different, and we know it <span class="term">[confounding by indication]</span></h3>
+        <p>Ozempic starters cost more at baseline &mdash; $900 vs. $700 a month &mdash; probably because costlier, more complex members are the ones who get the newer drug. Comparing <em>changes</em> removes any gap that stays constant, but if the groups differ in ways that <em>change over time</em> (for example, more members with diabetes in one group), that can still tilt the answer. So before anyone looks at the after-period, we rebuild the comparison group to resemble the Ozempic group:</p>
+        <ul class="limits">
+          <li><strong>Match or weight on the starting picture</strong> <span class="term">[propensity score matching / weighting]</span> &mdash; using only before-period claims, pair each Ozempic starter with other-drug starters of similar age, sex, conditions, and prior costs &mdash; or weight members so the two groups&rsquo; starting profiles line up numerically.</li>
+          <li><strong>Prove the rebuild worked</strong> <span class="term">[covariate balance]</span> &mdash; compare the groups&rsquo; starting characteristics side by side after matching. The working rule is that remaining gaps should be tiny <span class="term">[standardized mean difference below 0.1]</span>. If they don&rsquo;t balance, we fix the match or narrow the study population &mdash; we don&rsquo;t proceed to the answer.</li>
+          <li><strong>Then run the same three subtractions on the matched groups</strong> <span class="term">[difference-in-differences on a matched sample]</span> &mdash; matching handles the differences we can see at the start; comparing changes handles the shared forces that move both groups over time. Each method covers the other&rsquo;s blind spot.</li>
+        </ul>
+      </section>
+
+      <div class="bottom-line">
+        <h2>The bottom line</h2>
+        <p>We can&rsquo;t run the ideal trial &mdash; but by comparing members who started Ozempic with members who started a different weight-loss drug, and comparing how each group&rsquo;s costs <em>changed</em> from its own starting point, we get the closest honest answer claims data can give: whether Ozempic lowers the cost of obesity care <em>more</em> than the alternative.</p>
+      </div>
+      <p class="fineprint">All member names and dollar figures on this page are a made-up teaching example, not real member data.</p>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+        var MONTH_LABELS = ["-6","-5","-4","-3","-2","-1","+1","+2","+3","+4","+5","+6"];
+
+        /* ---------- Toy data (monthly obesity-related cost per member) ---------- */
+        var MEMBERS = [
+          { id: "m1", name: "Maria",  group: "oz",  pre: [940, 960, 990, 1010, 1040, 1060], post: [760, 730, 710, 690, 670, 640] },
+          { id: "m2", name: "James",  group: "oz",  pre: [840, 860, 890, 910, 940, 960],   post: [690, 660, 640, 620, 600, 570] },
+          { id: "m3", name: "Priya",  group: "oz",  pre: [740, 760, 790, 810, 840, 860],   post: [620, 590, 570, 550, 530, 500] },
+          { id: "m4", name: "Tom",    group: "gen", pre: [740, 760, 790, 810, 840, 860],   post: [680, 650, 630, 610, 590, 560] },
+          { id: "m5", name: "Alicia", group: "gen", pre: [640, 660, 690, 710, 740, 760],   post: [610, 580, 560, 540, 520, 490] },
+          { id: "m6", name: "David",  group: "gen", pre: [540, 560, 590, 610, 640, 660],   post: [540, 510, 490, 470, 450, 420] }
+        ];
+        function avg(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return s / a.length; }
+        function series(m) { return m.pre.concat(m.post); }
+        function groupSeries(g) {
+          var ms = MEMBERS.filter(function (m) { return m.group === g; });
+          var out = [];
+          for (var i = 0; i < 12; i++) {
+            var s = 0; for (var j = 0; j < ms.length; j++) s += series(ms[j])[i];
+            out.push(s / ms.length);
+          }
+          return out;
+        }
+        var OZ = groupSeries("oz"), GEN = groupSeries("gen");
+        /* Expected Ozempic path if it had only matched the other drug's change */
+        var GEN_PRE_AVG = avg(GEN.slice(0, 6)), OZ_PRE_AVG = avg(OZ.slice(0, 6));
+        var EXPECTED = OZ.slice(0, 6).concat(GEN.slice(6).map(function (v) { return OZ_PRE_AVG + (v - GEN_PRE_AVG); }));
+
+        function money(v) { return "$" + Math.round(v).toLocaleString("en-US"); }
+        function signed(v) { return (v < 0 ? "\u2212$" : "+$") + Math.abs(Math.round(v)).toLocaleString("en-US"); }
+
+        /* ---------- Group summary table (Step 2) ---------- */
+        var tbody = document.querySelector("#memberTable tbody");
+        function groupRow(label, g) {
+          var ms = MEMBERS.filter(function (m) { return m.group === g; });
+          var b = avg(ms.map(function (m) { return avg(m.pre); })), a = avg(ms.map(function (m) { return avg(m.post); }));
+          var tr = document.createElement("tr");
+          tr.className = "grp";
+          tr.innerHTML = "<td>" + label + "</td><td class='num'>" + money(b) + "</td><td class='num'>" + money(a) + "</td><td class='num down'>" + signed(a - b) + "</td>";
+          return tr;
+        }
+        tbody.appendChild(groupRow("Ozempic group average", "oz"));
+        tbody.appendChild(groupRow("Other-drug group average", "gen"));
+        var ozChange = avg(MEMBERS.filter(function (m) { return m.group === "oz"; }).map(function (m) { return avg(m.post) - avg(m.pre); }));
+        var genChange = avg(MEMBERS.filter(function (m) { return m.group === "gen"; }).map(function (m) { return avg(m.post) - avg(m.pre); }));
+        var didTr = document.createElement("tr");
+        didTr.className = "didrow";
+        didTr.innerHTML = "<td>Difference-in-differences</td><td class='num'>&mdash;</td><td class='num'>&mdash;</td><td class='num'>" + signed(ozChange - genChange) + "</td>";
+        tbody.appendChild(didTr);
+
+        /* ---------- Full monthly tables (Step 1) ---------- */
+        function plain(v) { return Math.round(v).toLocaleString("en-US"); }
+        function buildMonthly(tableId, g) {
+          var ms = MEMBERS.filter(function (m) { return m.group === g; });
+          var tb = document.querySelector("#" + tableId + " tbody");
+          function avgRow(label, period) {
+            var tot = 0, cells = "";
+            ms.forEach(function (m) { var a = avg(m[period]); tot += a; cells += "<td class='num'>" + plain(a) + "</td>"; });
+            var tr = document.createElement("tr");
+            tr.className = "avgrow";
+            tr.innerHTML = "<td>" + label + "</td>" + cells + "<td class='num'>" + plain(tot) + "</td><td class='num plotcol'>" + plain(tot / ms.length) + "</td>";
+            return tr;
+          }
+          for (var i = 0; i < 12; i++) {
+            var total = 0, cells = "";
+            ms.forEach(function (m) { var v = series(m)[i]; total += v; cells += "<td class='num'>" + plain(v) + "</td>"; });
+            var tr = document.createElement("tr");
+            tr.innerHTML = "<td class='num'>Month " + MONTH_LABELS[i].replace("-", "\u2212") + "</td>" + cells +
+              "<td class='num'>" + plain(total) + "</td><td class='num plotcol'>" + plain(total / ms.length) + "</td>";
+            tb.appendChild(tr);
+            if (i === 5) {
+              tb.appendChild(avgRow("Before average", "pre"));
+              var dv = document.createElement("tr");
+              dv.className = "fillrow";
+              dv.innerHTML = "<td colspan='6'>Month 0 \u2014 first fill \u00B7 belongs to neither period</td>";
+              tb.appendChild(dv);
+            }
+            if (i === 11) tb.appendChild(avgRow("After average", "post"));
+          }
+        }
+        buildMonthly("ozMonthly", "oz");
+        buildMonthly("genMonthly", "gen");
+
+        /* ---------- Chart (hand-drawn SVG) ---------- */
+        var svg = document.getElementById("chart");
+        var NS = "http://www.w3.org/2000/svg";
+        var W = 720, H = 430, ML = 58, MR = 20, MT = 26, MB = 50;
+        var PW = W - ML - MR, PH = H - MT - MB;
+        var VMIN = 400, VMAX = 1100;
+        function X(i) { return ML + (i / 11) * PW; }
+        function Y(v) { return MT + (1 - (v - VMIN) / (VMAX - VMIN)) * PH; }
+        function el(tag, attrs) {
+          var e = document.createElementNS(NS, tag);
+          for (var k in attrs) e.setAttribute(k, attrs[k]);
+          return e;
+        }
+        function pathFrom(vals, from, to) {
+          var d = "";
+          for (var i = from; i <= to; i++) d += (d ? " L" : "M") + X(i).toFixed(1) + " " + Y(vals[i]).toFixed(1);
+          return d;
+        }
+        // gridlines + y labels
+        [400, 600, 800, 1000].forEach(function (v) {
+          svg.appendChild(el("line", { x1: ML, x2: ML + PW, y1: Y(v), y2: Y(v), stroke: "var(--line)", "stroke-width": 1 }));
+          var t = el("text", { x: ML - 8, y: Y(v) + 4, "text-anchor": "end", "font-size": 12.5, fill: "var(--faint)" });
+          t.textContent = "$" + v; svg.appendChild(t);
+        });
+        // before/after shading + divider
+        var divX = (X(5) + X(6)) / 2;
+        svg.appendChild(el("rect", { x: divX, y: MT, width: ML + PW - divX, height: PH, fill: "var(--teal-soft)", opacity: 0.55 }));
+        svg.appendChild(el("line", { x1: divX, x2: divX, y1: MT, y2: MT + PH, stroke: "var(--faint)", "stroke-width": 1.5, "stroke-dasharray": "5 4" }));
+        var bl = el("text", { x: (ML + divX) / 2, y: MT + PH + 34, "text-anchor": "middle", "font-size": 12, "font-weight": 700, fill: "var(--muted)", "letter-spacing": "0.08em" });
+        bl.textContent = "BEFORE"; svg.appendChild(bl);
+        var al = el("text", { x: (divX + ML + PW) / 2, y: MT + PH + 34, "text-anchor": "middle", "font-size": 12, "font-weight": 700, fill: "var(--muted)", "letter-spacing": "0.08em" });
+        al.textContent = "AFTER"; svg.appendChild(al);
+        var fl = el("text", { x: divX, y: MT - 10, "text-anchor": "middle", "font-size": 12.5, "font-weight": 700, fill: "var(--accent)" });
+        fl.textContent = "first fill (month 0)"; svg.appendChild(fl);
+        // x labels
+        MONTH_LABELS.forEach(function (lab, i) {
+          var t = el("text", { x: X(i), y: MT + PH + 18, "text-anchor": "middle", "font-size": 12, fill: "var(--faint)" });
+          t.textContent = lab; svg.appendChild(t);
+        });
+        var xl = el("text", { x: ML + PW / 2, y: H - 2, "text-anchor": "middle", "font-size": 12, fill: "var(--faint)" });
+        xl.textContent = "months relative to first prescription fill"; svg.appendChild(xl);
+
+        // expected path (shown by default — the counterfactual)
+        var expPath = el("path", { d: pathFrom(EXPECTED, 5, 11), fill: "none", stroke: "var(--expected)", "stroke-width": 2.5, "stroke-dasharray": "7 5", opacity: 1, "stroke-linecap": "round" });
+        svg.appendChild(expPath);
+        var expLabel = el("text", { x: X(11) - 4, y: Y(EXPECTED[11]) - 10, "text-anchor": "end", "font-size": 12.5, "font-weight": 600, fill: "var(--expected)", opacity: 1 });
+        expLabel.textContent = "expected: " + money(EXPECTED[11]); svg.appendChild(expLabel);
+        // counterfactual point markers + value labels, one per after month —
+        // each expected value is exactly $120 above the Ozempic group's actual cost that month
+        var expMarks = [];
+        for (var ei = 6; ei <= 11; ei++) {
+          var ec = el("circle", { cx: X(ei), cy: Y(EXPECTED[ei]), r: 3.2, fill: "var(--expected)", stroke: "var(--surface)", "stroke-width": 1.5, opacity: 1 });
+          svg.appendChild(ec); expMarks.push(ec);
+          if (ei === 11) continue; // the bold "expected: $690" label above covers the final month
+          var et = el("text", { x: X(ei), y: Y(EXPECTED[ei]) - 9, "text-anchor": "middle", "font-size": 11, "font-weight": 600, fill: "var(--expected)", opacity: 1 });
+          et.textContent = Math.round(EXPECTED[ei]); svg.appendChild(et); expMarks.push(et);
+        }
+        // gap annotation between the expected and actual end points
+        var gapLine = el("line", { x1: X(11) + 7, x2: X(11) + 7, y1: Y(EXPECTED[11]), y2: Y(OZ[11]), stroke: "var(--expected)", "stroke-width": 2, opacity: 1 });
+        svg.appendChild(gapLine);
+        var gapLabel = el("text", { x: X(11) - 10, y: (Y(EXPECTED[11]) + Y(OZ[11])) / 2 + 4, "text-anchor": "end", "font-size": 12.5, "font-weight": 700, fill: "var(--expected)", opacity: 1 });
+        gapLabel.textContent = "gap: $120"; svg.appendChild(gapLabel);
+        // group average paths
+        function groupPath(vals, color, above) {
+          var p = el("path", { d: pathFrom(vals, 0, 11), fill: "none", stroke: color, "stroke-width": 3.4, "stroke-linejoin": "round", "stroke-linecap": "round" });
+          svg.appendChild(p);
+          vals.forEach(function (v, i) {
+            svg.appendChild(el("circle", { cx: X(i), cy: Y(v), r: 3.5, fill: color, stroke: "var(--surface)", "stroke-width": 1.5 }));
+            if (i === 11) return; // bold end label below covers the final month
+            var ly = above ? -9 : 18;
+            if (above && i === 6) ly = 19; // first after-month: the steep drop would cross a label above the point
+            var lab = el("text", { x: X(i) + (i === 0 ? 3 : 0), y: Y(v) + ly, "text-anchor": i === 0 ? "start" : "middle", "font-size": 11, fill: color, opacity: 0.9 });
+            lab.textContent = Math.round(v); svg.appendChild(lab);
+          });
+          var t = el("text", { x: X(11) - 2, y: Y(vals[11]) - 12, "text-anchor": "end", "font-size": 13.5, "font-weight": 700, fill: color });
+          t.textContent = money(vals[11]); svg.appendChild(t);
+          return p;
+        }
+        groupPath(OZ, "var(--teal)", true);
+        groupPath(GEN, "var(--ochre)", false);
+
+        /* ---------- Expected-line toggle ---------- */
+        var tE = document.getElementById("toggleExpected");
+        var legendExpected = document.getElementById("legendExpected");
+        tE.addEventListener("click", function () {
+          var on = tE.getAttribute("aria-pressed") !== "true";
+          tE.setAttribute("aria-pressed", String(on));
+          expPath.setAttribute("opacity", on ? 1 : 0);
+          expLabel.setAttribute("opacity", on ? 1 : 0);
+          expMarks.forEach(function (mk) { mk.setAttribute("opacity", on ? 1 : 0); });
+          gapLine.setAttribute("opacity", on ? 1 : 0);
+          gapLabel.setAttribute("opacity", on ? 1 : 0);
+          legendExpected.hidden = !on;
+        });
+
+        /* ---------- DiD stepper ---------- */
+        var cells = {};
+        document.querySelectorAll("#didGrid .cell[data-cell]").forEach(function (c) { cells[c.getAttribute("data-cell")] = c; });
+        var lines = {};
+        document.querySelectorAll("#didEq .line").forEach(function (l) { lines[l.getAttribute("data-line")] = l; });
+        function didReset() {
+          Object.keys(cells).forEach(function (k) { cells[k].classList.remove("lit-oz", "lit-gen", "lit-final"); });
+          Object.keys(lines).forEach(function (k) { lines[k].classList.remove("on"); });
+          cells["final"].querySelector(".inner").lastChild.textContent = "?";
+        }
+        document.getElementById("didReset").addEventListener("click", didReset);
+        document.getElementById("didStep1").addEventListener("click", function () {
+          cells["oz-before"].classList.add("lit-oz"); cells["oz-after"].classList.add("lit-oz"); cells["oz-change"].classList.add("lit-oz");
+          lines["1"].classList.add("on");
+        });
+        document.getElementById("didStep2").addEventListener("click", function () {
+          cells["gen-before"].classList.add("lit-gen"); cells["gen-after"].classList.add("lit-gen"); cells["gen-change"].classList.add("lit-gen");
+          lines["2"].classList.add("on");
+        });
+        document.getElementById("didStep3").addEventListener("click", function () {
+          document.getElementById("didStep1").click(); document.getElementById("didStep2").click();
+          cells["oz-change"].classList.add("lit-oz"); cells["gen-change"].classList.add("lit-gen");
+          cells["final"].classList.add("lit-final");
+          cells["final"].querySelector(".inner").lastChild.textContent = "\u2212$120";
+          lines["3"].classList.add("on");
+        });
+
+
+      })();
+    </script>
+  </body>
+</html>
