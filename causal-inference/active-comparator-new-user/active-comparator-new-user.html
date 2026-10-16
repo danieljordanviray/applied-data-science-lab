@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light" />
     <link rel="icon" href="data:," />
-    <title>Active-comparator, new-user cohort study analyzed with difference-in-differences using medical claims data: Does Ozempic lower the cost of obesity care?</title>
+    <title>Active-comparator, new-user cohort study analyzed with difference-in-differences using medical claims and enrollment data: Does Ozempic lower the cost of obesity care?</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
@@ -239,13 +239,13 @@
     <main class="wrap">
       <header>
         <div class="part-label">Applied Data Science Lab · Causal Inference</div>
-        <h1>Active-comparator, new-user cohort study analyzed with difference-in-differences using medical claims data: Does Ozempic lower the cost of obesity care?</h1>
-        <p class="lede">Does Ozempic lower the cost of obesity care? A claims-only study design explained end to end</p>
+        <h1>Active-comparator, new-user cohort study analyzed with difference-in-differences using medical claims and enrollment data: Does Ozempic lower the cost of obesity care?</h1>
+        <p class="lede">Does Ozempic lower the cost of obesity care? A study design using claims and enrollment data, explained end to end</p>
         <div class="question-box">
           <div class="q-label">The question</div>
           <p>For members with obesity, does starting <strong>Ozempic</strong> reduce their <strong>total cost of obesity-related care</strong> more than starting a <strong>different weight-loss drug</strong>?</p>
           <div class="answer-strip">
-            <div class="cell"><span class="k">Who</span><span class="v">Members with an obesity diagnosis code on their claims</span></div>
+            <div class="cell"><span class="k">Who</span><span class="v">Members with an obesity diagnosis code on their claims, enrolled for the full study window</span></div>
             <div class="cell"><span class="k">Compared</span><span class="v">Ozempic starters vs. starters of another weight-loss drug</span></div>
             <div class="cell"><span class="k">Measured</span><span class="v">Obesity-related cost of care, 6 months before vs. 6 months after starting</span></div>
           </div>
@@ -255,8 +255,8 @@
 
       <section aria-labelledby="claims-h">
         <div class="part-label">Part 1 · What we actually have</div>
-        <h2 id="claims-h">Our data: claims, and only claims</h2>
-        <p>Every time a member gets care, a claim is submitted so the provider gets paid. A claim can&rsquo;t tell us everything &mdash; but it tells us the few things this study needs:</p>
+        <h2 id="claims-h">Our data: claims plus enrollment</h2>
+        <p>This study uses two linked data sources, not claims alone. Every time a member gets care, a claim is submitted so the provider gets paid &mdash; claims say what care happened and what it cost. Enrollment records are separate and simpler: they say who was covered, and for exactly which dates. We need both. Claims tell us the care; enrollment tells us whether we can trust a quiet month &mdash; and whether a member was observable for the whole study window at all:</p>
         <div class="claim-grid">
           <div class="claim" role="img" aria-label="Example claim showing member, date, diagnosis code for obesity, the drug filled, and the amount paid">
             <div class="row"><span class="fk">Member</span><span class="fv">M. Rivera</span></div>
@@ -269,23 +269,23 @@
             <li><strong>Who has obesity:</strong> an obesity diagnosis code <span class="term">[ICD-10 diagnosis code]</span> appears on their claims. (This finds members whose obesity was coded during care &mdash; it can&rsquo;t find members who never had it written on a claim.)</li>
             <li><strong>Who started which drug, and when:</strong> the first pharmacy claim for Ozempic or for another weight-loss drug. That date is each member&rsquo;s starting line <span class="term">[index date]</span>.</li>
             <li><strong>What care cost:</strong> the paid amounts on all their obesity-related claims, month by month.</li>
-            <li><strong>A quiet month means $0, not &ldquo;missing&rdquo;:</strong> enrollment records confirm the member was covered, so a month with no obesity claims is a month that genuinely cost nothing.</li>
+            <li><strong>Enrollment must cover the whole window:</strong> we look up enrollment for every member and require them to be enrolled for the entire relevant time &mdash; all 6 months before and all 6 months after their first fill <span class="term">[continuous enrollment]</span>. Only then does a quiet month mean $0, not &ldquo;missing&rdquo;: the member was covered, so a month with no obesity claims is a month that genuinely cost nothing.</li>
           </ul>
         </div>
       </section>
 
       <section aria-labelledby="plan-h">
         <div class="part-label">Part 2 · The plan</div>
-        <h2 id="plan-h">What we&rsquo;ll do instead: rebuild the ideal trial from claims</h2>
-        <p>In real life, nobody was assigned a drug at random &mdash; so instead of comparing Ozempic users to everyone else (which would mix up the drug with the kind of person who gets it), we compare them to the fairest group claims can give us: <strong>people who also started a weight-loss drug, just a different one</strong>. Both groups were in the same situation at the same kind of moment. Then we compare how each group&rsquo;s costs <em>changed</em>.</p>
+        <h2 id="plan-h">What we&rsquo;ll do instead: rebuild the ideal trial from claims and enrollment</h2>
+        <p>In real life, nobody was assigned a drug at random &mdash; so instead of comparing Ozempic users to everyone else (which would mix up the drug with the kind of person who gets it), we compare them to the fairest group claims and enrollment can give us: <strong>people who also started a weight-loss drug, just a different one</strong>. Both groups were in the same situation at the same kind of moment. Then we compare how each group&rsquo;s costs <em>changed</em>.</p>
         <div class="name-box">
-          <p><strong>What this design is called:</strong> a <strong>target trial emulation</strong> <span class="term">[target trial emulation]</span> &mdash; we write down the head-to-head trial we wish we could run, then rebuild each piece of it from claims. The comparison group is an <strong>active comparator</strong> made of <strong>new users</strong> <span class="term">[active-comparator, new-user design]</span>, and the arithmetic that produces the answer is <strong>difference-in-differences</strong> <span class="term">[difference-in-differences &middot; DiD]</span>. Those are the names to use when searching the literature or talking with other researchers.</p>
+          <p><strong>What this design is called:</strong> a <strong>target trial emulation</strong> <span class="term">[target trial emulation]</span> &mdash; we write down the head-to-head trial we wish we could run, then rebuild each piece of it from claims and enrollment records. The comparison group is an <strong>active comparator</strong> made of <strong>new users</strong> <span class="term">[active-comparator, new-user design]</span>, and the arithmetic that produces the answer is <strong>difference-in-differences</strong> <span class="term">[difference-in-differences &middot; DiD]</span>. Those are the names to use when searching the literature or talking with other researchers.</p>
         </div>
         <ol class="steps">
-          <li><span class="stepnum">1</span><div><span class="st">Find the members</span><p>Pull members who have an obesity diagnosis code on their claims and who started a weight-loss drug.</p></div></li>
+          <li><span class="stepnum">1</span><div><span class="st">Find the members &mdash; and verify enrollment</span><p>Pull members who have an obesity diagnosis code on their claims and who started a weight-loss drug. Then look up each member&rsquo;s enrollment and keep only those enrolled for the entire window &mdash; 6 months before through 6 months after their first fill <span class="term">[continuous enrollment]</span>. Without that check we could not tell a true $0 month from a month when the member simply was not covered.</p></div></li>
           <li><span class="stepnum">2</span><div><span class="st">Split into two groups by what they started</span><p><strong>Group A:</strong> first fill was Ozempic. <strong>Group B:</strong> first fill was another weight-loss drug. Everyone in the study started <em>something</em> &mdash; nobody is compared against &ldquo;doing nothing&rdquo; <span class="term">[active comparator]</span>.</p></div></li>
           <li><span class="stepnum">3</span><div><span class="st">Line everyone up at their own starting line</span><p>Members start in different calendar months, so we line them up by time relative to their first fill &mdash; month 0 &mdash; not by calendar date <span class="term">[time zero &middot; relative-time alignment]</span>.</p></div></li>
-          <li><span class="stepnum">4</span><div><span class="st">Add up obesity-related costs, 6 months before and 6 months after</span><p>For each member, total the paid amounts on their obesity-related claims in each month. Covered months with no claims count as $0.</p></div></li>
+          <li><span class="stepnum">4</span><div><span class="st">Add up obesity-related costs, 6 months before and 6 months after</span><p>For each member, total the paid amounts on their obesity-related claims in each month. Because enrollment has already been confirmed for the whole window, a month with no claims counts as $0 &mdash; genuinely no cost, not missing data.</p></div></li>
           <li><span class="stepnum">5</span><div><span class="st">Compare the changes, not the end points</span><p>Each group is first compared to <em>its own</em> past. Then we compare the two changes. Whatever pushed both groups&rsquo; costs around equally &mdash; price inflation, the drugs helping in general &mdash; cancels out, leaving the extra effect of Ozempic <span class="term">[difference-in-differences]</span>.</p></div></li>
         </ol>
         <div class="timeline" role="img" aria-label="Timeline: six months before the first prescription fill, the fill itself at month zero, then six months after">
@@ -298,12 +298,12 @@
       <section aria-labelledby="toy-h">
         <div class="part-label">Part 3 · A toy example</div>
         <h2 id="toy-h">Six members, worked end to end</h2>
-        <p>Here is the whole study in miniature, with made-up numbers small enough to check on paper. Three members started Ozempic, three started another weight-loss drug; all six have an obesity diagnosis code. The numbers are built in two steps &mdash; and each step is exactly what you would do with a real claims extract:</p>
+        <p>Here is the whole study in miniature, with made-up numbers small enough to check on paper. Three members started Ozempic, three started another weight-loss drug; all six have an obesity diagnosis code, and in this toy example all six were enrolled for the full 12 months, so every month is observed for every member. The numbers are built in two steps &mdash; and each step is exactly what you would do with a real claims and enrollment extract:</p>
         <p><strong>Step 1</strong> &mdash; get every member&rsquo;s cost in every month; add each month up within a group to get the group&rsquo;s total; then divide by the number of members to get the <strong>average cost per member</strong>. That last column is what the chart plots. Two highlighted rows summarize each period: the <strong>Before average</strong>, right after month &minus;1, and the <strong>After average</strong>, right after month +6.<br />
         <strong>Step 2</strong> &mdash; average the members within each group. That produces four group numbers &mdash; a before and an after for each group &mdash; and comparing the two groups&rsquo; changes gives the study&rsquo;s answer, worked in full right below the table.</p>
 
         <h3 class="stephead">Step 1 &middot; Every member, every month</h3>
-        <p>From the claims, take each member and add up the paid amounts on all their obesity-related claims within each month, with months lined up relative to their first fill &mdash; one cost figure per member per month <span class="term">[member-month panel]</span>. A month when an enrolled member filed no obesity claims counts as $0: it adds zero to the total, and the member still counts in the divisor. All figures are dollars of obesity-related cost for that month.</p>
+        <p>From the claims &mdash; after checking enrollment &mdash; take each member and add up the paid amounts on all their obesity-related claims within each month, with months lined up relative to their first fill &mdash; one cost figure per member per month <span class="term">[member-month panel]</span>. A month when an enrolled member filed no obesity claims counts as $0: it adds zero to the total, and the member still counts in the divisor. All figures are dollars of obesity-related cost for that month.</p>
 
         <h3 class="grouphead" style="color:var(--teal);">Ozempic group &mdash; monthly cost by member</h3>
         <table class="members monthly oz-table" id="ozMonthly">
@@ -390,11 +390,12 @@
           </div>
         </div>
 
-        <h3 class="stephead">Doing this with real claims data</h3>
+        <h3 class="stephead">Doing this with real claims and enrollment data</h3>
         <ul class="limits">
-          <li><strong>The divisor changes month to month.</strong> In the toy example each group always has 3 members. In real data, divide each month&rsquo;s group total by the number of members who were enrolled and in the study <em>that month</em> &mdash; that is why every figure in this method is expressed as an average per member <span class="term">[per member per month &middot; PMPM]</span>, never as a raw group total.</li>
-          <li><strong>Zero-claim months stay in.</strong> A member who was enrolled but filed no obesity-related claim in a month contributes $0 to that month&rsquo;s total and still counts in the divisor. Dropping quiet months would inflate every average and break the comparison.</li>
-          <li><strong>Decide the leaving rule before you start.</strong> Members disenroll mid-window. Pick one rule &mdash; for example, require enrollment for the full twelve months, or include each member for the months they were enrolled &mdash; and apply it identically to both groups, because disenrollment is rarely random.</li>
+          <li><strong>Look up enrollment for everyone, before any cost math</strong> <span class="term">[continuous enrollment requirement]</span> &mdash; for each candidate member, check the enrollment records and confirm coverage spans the entire relevant time: all 6 months before and all 6 months after the first fill. Members with a coverage gap, or who disenroll partway through the window, are excluded &mdash; under the same rule in both groups &mdash; because for them a $0 month could mean &ldquo;not covered&rdquo; rather than &ldquo;no care,&rdquo; and their before/after comparison would be built on uneven observation.</li>
+          <li><strong>The divisor is the group size, and it stays fixed.</strong> In the toy example each group always has 3 members, enrolled for all 12 months. Real data works the same way once the enrollment requirement is applied: every included member contributes to every month, so each month&rsquo;s group total is divided by the same number of members &mdash; that is why every figure in this method is expressed as an average per member <span class="term">[per member per month &middot; PMPM]</span>, never as a raw group total.</li>
+          <li><strong>Zero-claim months stay in.</strong> A member who was enrolled &mdash; verified against the enrollment records &mdash; but filed no obesity-related claim in a month contributes $0 to that month&rsquo;s total and still counts in the divisor. Dropping quiet months would inflate every average and break the comparison.</li>
+          <li><strong>Say plainly whom the requirement leaves out.</strong> Requiring a full 12 months of enrollment narrows the study to stably enrolled members, and members who lose coverage may differ from those who keep it. Apply the rule identically to both groups, before looking at any outcomes, and report how many members it removed from each group.</li>
         </ul>
       </section>
 
@@ -412,7 +413,7 @@
         <h3 style="margin-top:28px;">2 &middot; The groups start different, and we know it <span class="term">[confounding by indication]</span></h3>
         <p>Ozempic starters cost more at baseline &mdash; $900 vs. $700 a month &mdash; probably because costlier, more complex members are the ones who get the newer drug. Comparing <em>changes</em> removes any gap that stays constant, but if the groups differ in ways that <em>change over time</em> (for example, more members with diabetes in one group), that can still tilt the answer. So before anyone looks at the after-period, we rebuild the comparison group to resemble the Ozempic group:</p>
         <ul class="limits">
-          <li><strong>Match or weight on the starting picture</strong> <span class="term">[propensity score matching / weighting]</span> &mdash; using only before-period claims, pair each Ozempic starter with other-drug starters of similar age, sex, conditions, and prior costs &mdash; or weight members so the two groups&rsquo; starting profiles line up numerically.</li>
+          <li><strong>Match or weight on the starting picture</strong> <span class="term">[propensity score matching / weighting]</span> &mdash; using only before-period data, pair each Ozempic starter with other-drug starters of similar age, sex, conditions, and prior costs &mdash; or weight members so the two groups&rsquo; starting profiles line up numerically.</li>
           <li><strong>Prove the rebuild worked</strong> <span class="term">[covariate balance]</span> &mdash; compare the groups&rsquo; starting characteristics side by side after matching. The working rule is that remaining gaps should be tiny <span class="term">[standardized mean difference below 0.1]</span>. If they don&rsquo;t balance, we fix the match or narrow the study population &mdash; we don&rsquo;t proceed to the answer.</li>
           <li><strong>Then run the same three subtractions on the matched groups</strong> <span class="term">[difference-in-differences on a matched sample]</span> &mdash; matching handles the differences we can see at the start; comparing changes handles the shared forces that move both groups over time. Each method covers the other&rsquo;s blind spot.</li>
         </ul>
@@ -420,7 +421,7 @@
 
       <div class="bottom-line">
         <h2>The bottom line</h2>
-        <p>We can&rsquo;t run the ideal trial &mdash; but by comparing members who started Ozempic with members who started a different weight-loss drug, and comparing how each group&rsquo;s costs <em>changed</em> from its own starting point, we get the closest honest answer claims data can give: whether Ozempic lowers the cost of obesity care <em>more</em> than the alternative.</p>
+        <p>We can&rsquo;t run the ideal trial &mdash; but by comparing members who started Ozempic with members who started a different weight-loss drug, and comparing how each group&rsquo;s costs <em>changed</em> from its own starting point, we get the closest honest answer claims and enrollment data can give: whether Ozempic lowers the cost of obesity care <em>more</em> than the alternative.</p>
       </div>
       <p class="fineprint">All member names and dollar figures on this page are a made-up teaching example, not real member data.</p>
     </main>
