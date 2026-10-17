@@ -182,6 +182,9 @@ a{color:var(--accent); text-decoration:none} a:hover{text-decoration:underline}
 .use{margin:.35em 0}
 .assump{color:#444; font-size:.96em; margin:.35em 0}
 .fallback{font-size:.96em; margin:.35em 0}
+.know{font-size:.96em; margin:.5em 0; background:#f7f9fd; border-left:3px solid var(--accent); padding:7px 12px}
+.tail{margin:.4em 0 .4em 1em}
+.hyp{margin:.1em 0 .1em 1em; font-size:.97em}
 details{border:1px solid var(--line); border-radius:8px; margin:.6em 0 1.1em; background:#fbfcfe}
 details summary{cursor:pointer; padding:9px 14px; font-weight:bold; color:var(--accent); font-size:.95em}
 details .body{padding:2px 14px 12px}
@@ -300,6 +303,23 @@ data — 0.05 is the convention. If p &le; &alpha;, you reject H<sub>0</sub>; if
 counts (the default — safest, and what you should use unless you committed in advance).
 <strong>Right-tailed</strong>: only "more than" counts. <strong>Left-tailed</strong>: only "less than" counts.
 Choosing the tail after seeing the data is cheating: it quietly doubles your false-alarm rate.</p>
+<p><strong>Three motivating examples</strong> — same machinery, three different questions:</p>
+<p class="tail"><strong>Two-tailed</strong> — <em>a new discharge process is rolled out; does length of stay change
+at all?</em> Shorter stays might mean efficiency — or patients sent home too early. Longer might mean a
+bottleneck. You care about a change in <em>either</em> direction, so both tails carry evidence.</p>
+<p class="hyp"><strong>Null:</strong> the population mean length of stay is still 5.0 days (the process changed nothing).<br>
+<strong>Alternative:</strong> the population mean length of stay is <em>not</em> 5.0 days — it moved, one way or the other.</p>
+<p class="tail"><strong>Right-tailed</strong> — <em>does a new flu-vaccine formulation produce a stronger antibody
+response than the standard one?</em> The only result that would change anyone's behavior is "stronger." Weaker
+or equal both mean the same decision: don't switch.</p>
+<p class="hyp"><strong>Null:</strong> the population mean antibody level with the new formulation is 40 units (no better than standard).<br>
+<strong>Alternative:</strong> the population mean antibody level is <em>greater than</em> 40 units.</p>
+<p class="tail"><strong>Left-tailed</strong> — <em>a care-management program was purchased for one reason: to cut
+cost. Does it?</em> The contract decision is adopt-if-cheaper; a cost <em>increase</em> leads to the same
+"don't adopt" as no change, so only the left tail carries evidence.</p>
+<p class="hyp"><strong>Null:</strong> the population mean monthly cost per member is still $850 (the program saved nothing).<br>
+<strong>Alternative:</strong> the population mean monthly cost per member is <em>less than</em> $850.</p>
+<p>When in doubt, go two-tailed — it's the honest default, and it's what every example later in this guide uses.</p>
 <svg id="tailsSvg" viewBox="0 0 640 240" role="img" aria-label="Normal curve with rejection regions shaded"></svg>
 <div class="ctl">
 <button data-tail="two" class="on">Two-tailed</button>
@@ -311,10 +331,14 @@ Choosing the tail after seeing the data is cheating: it quietly doubles your fal
 <div class="readout" id="tailsOut"></div>
 
 <h2 id="zscores">z-scores &amp; test statistics: one idea behind every test</h2>
-<p>A <strong>z-score</strong> measures distance in units of noise:
-<em>z = (what you saw &minus; what H<sub>0</sub> expects) / standard error</em>. Saw a sample mean of 104 when
-H<sub>0</sub> says 100, with a standard error of 1.5? That's z = 2.7 — your result sits 2.7 noise-units away from
-"nothing going on." The further out, the smaller the p-value.</p>
+<p>A <strong>z-score</strong> locates a <em>single observation</em>: how many population standard deviations
+one value sits from the population mean. A fasting glucose of 136 in a population with mean 100 and a
+population standard deviation of 12 has a z-score of (136 &minus; 100) / 12 = 3 — an unusual patient.</p>
+<p>A <strong>z-statistic</strong> does the same job for a <em>sample result</em>: how many standard errors your
+sample mean sits from the null value. The yardstick changes — standard error, not standard deviation — because
+a mean of 64 patients wobbles far less than a single patient does. A sample mean of 104 against a null of 100,
+with a standard error of 1.5, gives a z-statistic of 2.7. Same shape of calculation, different job: the z-score
+locates a person; the z-statistic judges evidence. When people say "the z-test," they mean the z-statistic.</p>
 <p>Every test statistic on this page — t, F, &chi;&sup2;, U, H — is that same move with different plumbing:
 <em>distance from H<sub>0</sub>, divided by how much wobble you'd expect by chance</em>. Learn to read one and
 you can read them all. Field rule of thumb: a statistic around <strong>2 standard errors</strong> from the null
@@ -356,20 +380,25 @@ two, not a law of nature.</p>
 BODY = r"""
 <h2>Comparing means</h2>
 
-<h3 id="ztest">z-test (one sample, known &sigma;)</h3>
+<h3 id="ztest">z-test (one sample, known population standard deviation)</h3>
 <p class="use"><strong>Use it when:</strong> you're comparing a sample mean to a known benchmark <em>and</em> you
-genuinely know the population standard deviation &sigma; — usually because a huge reference dataset or a
+genuinely know the population standard deviation — usually because a huge reference dataset or a
 calibrated instrument pinned it down.</p>
 <p><strong>Example:</strong> a reference lab has measured fasting glucose for years: population mean 100 mg/dL,
-&sigma; = 12 known from quality-control data. A new clinic's 64 patients average %%xbar%% mg/dL. Different
-population, or just noise? z = %%z_stat%%, %%z_p%% &rarr; <strong>reject H<sub>0</sub></strong> at &alpha; = 0.05.</p>
-<p class="assump"><strong>Assumptions:</strong> &sigma; truly known; independent observations; sample mean roughly
+population standard deviation 12, known from quality-control data. A new clinic's 64 patients average %%xbar%% mg/dL. Different
+population, or just noise? z = %%z_stat%%, %%z_p%% &rarr; <strong>reject H<sub>0</sub></strong> at a significance level of 0.05.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> We know both population values the formula
+needs: the population mean under the null (100 — the benchmark) and the population standard deviation (12).
+Knowing the second one is the rare luxury, and it's the whole reason this test can use the exact normal
+distribution. What we don't know is whether the clinic's population mean has actually moved — that's what
+the sample is for.</p>
+<p class="assump"><strong>Assumptions:</strong> the population standard deviation is truly known; independent observations; sample mean roughly
 normal (data normal, or n &ge; ~30).</p>
-<p class="fallback"><strong>Reality check:</strong> &sigma; is almost never known in real work — that's why the
+<p class="fallback"><strong>Reality check:</strong> the population standard deviation is almost never known in real work — that's why the
 t-test below is the everyday tool. The z machinery's main modern jobs are proportions (further down) and
 large-sample approximations.</p>
 <details><summary>Data structure + Python code</summary><div class="body">
-<p>Data: one sample summarized by its mean, plus the known &sigma;. The course-style way — build the p-value
+<p>Data: one sample summarized by its mean, plus the known population standard deviation. The course-style way — build the p-value
 by hand from the normal CDF:</p>
 <pre><code>import numpy as np
 from scipy.stats import norm
@@ -383,12 +412,22 @@ p = 2 * (1 - norm.cdf(abs(z)))                # two-tailed: double the upper tai
 </div></details>
 
 <h3 id="t1">One-sample t-test</h3>
-<p class="use"><strong>Use it when:</strong> one sample mean vs a benchmark, and &sigma; is <em>unknown</em> —
-the normal real-world case. The t distribution is the normal with fatter tails, charging you for having to
-estimate the spread from the same data.</p>
+<p class="use"><strong>Use it when:</strong> one sample mean vs a benchmark, and the population standard
+deviation is <em>unknown</em> — the normal real-world case.</p>
 <p><strong>Example:</strong> HbA1c for 25 patients at a diabetes clinic averages %%a1c_mean%%% against a
 target of 7.0%. T = %%t1_stat%%, %%t1_p%% &rarr; <strong>reject H<sub>0</sub></strong>: the clinic's patients
 run above target.</p>
+<div class="know"><strong>What we know, and what we don't.</strong> We <em>know</em> the benchmark — the
+population mean under the null is 7.0% because that's the clinical target; it's handed to us, and it's what
+turns "our average looks high" into a testable question. We do <em>not</em> know the population standard
+deviation: how much HbA1c varies across <em>all</em> patients like these. Nobody has measured all of them —
+all we have is the sample standard deviation of our 25 patients, and that's an estimate of the true spread,
+not the true spread itself. With only 25 patients, the estimate itself wobbles.
+<br><strong>How the t-test corrects for that:</strong> it swaps the normal distribution for the t distribution —
+the same bell shape, but with fatter tails. The fatter tails widen the "this could easily be chance" zone,
+charging you for the fact that one of your inputs (the spread) is itself a guess. The smaller the sample, the
+fatter the tails and the bigger the charge; as the sample grows, the spread estimate firms up, the tails slim
+down, and the t quietly becomes the z.</div>
 <p class="assump"><strong>Assumptions:</strong> independent observations; data roughly normal, or n &ge; ~30
 (the t-test tolerates mild skew at moderate n).</p>
 <p class="fallback"><strong>If that fails</strong> (small n, clearly skewed): the one-sample
@@ -407,6 +446,10 @@ pg.ttest(x=a1c, y=7.0)        # y = the benchmark value under H0</code></pre>
 <p><strong>Example:</strong> length of stay under a new discharge protocol (35 patients, mean %%los_new%% days)
 vs standard care (35 patients, mean %%los_std%% days). T = %%t2_stat%%, %%t2_p%% &rarr;
 <strong>reject H<sub>0</sub></strong>: the new protocol's stays are shorter.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> There's no benchmark this time — we don't
+know either group's population mean; the gap between them <em>is</em> the question. We also don't know either
+population standard deviation, so both are estimated from the samples, and the t distribution charges us for
+estimating. (Welch's version lets the two spreads differ; the classic version pools them into one estimate.)</p>
 <p class="assump"><strong>Assumptions:</strong> the two groups are independent; each group roughly normal or
 n &ge; ~30 per group. You do <em>not</em> need equal variances — use Welch's version (pingouin's default
 behavior), which adjusts for unequal spreads.</p>
@@ -426,6 +469,11 @@ pairs. The test runs on the <em>differences</em>, one per subject.</p>
 <p><strong>Example:</strong> systolic blood pressure in 20 patients before (mean %%bp_b%% mmHg) and after
 (mean %%bp_a%% mmHg) a 12-week hypertension program. T = %%tp_stat%%, %%tp_p%% &rarr;
 <strong>reject H<sub>0</sub></strong>: blood pressure dropped.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> No benchmark and no population values at
+all — what we have is each patient's pair of measurements, which collapses into one number per patient:
+their change. We don't know the population standard deviation of those changes, so it's estimated from the
+20 differences — one estimate, one t charge. Pairing's gift is what it removes: the large patient-to-patient
+variation in baseline blood pressure never enters the spread at all.</p>
 <p class="assump"><strong>Why pairing is powerful:</strong> each patient is their own control, so the large
 person-to-person variation cancels out of the comparison. <strong>Assumptions:</strong> the <em>differences</em>
 are roughly normal (not the raw values); pairs are independent of each other.</p>
@@ -446,6 +494,12 @@ test. ANOVA answers only "does <em>any</em> group differ?" — not which ones.</
 diet + exercise (%%m_dietex%%), medication (%%m_med%%), medication + exercise (%%m_medex%%), 16 patients each.
 F = %%aov_F%%, %%aov_p%% &rarr; <strong>reject H<sub>0</sub></strong>: the programs are not all equal. Which
 ones differ is the <a href="#pairwise">next section's</a> job.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> We know the four sample means. We know
+<em>none</em> of the population means, and not the population standard deviation — everything in the F
+statistic is estimated from the data in front of us. F compares two of those estimates: the spread
+<em>between</em> the group means (the signal) against the spread of patients <em>within</em> each group (the
+noise). If the between-group spread dwarfs the within-group spread, the groups can't all share one
+population mean.</p>
 <p class="assump"><strong>Assumptions:</strong> independent observations; roughly normal within each group (or
 decent n per group); roughly similar spreads across groups.</p>
 <p class="fallback"><strong>If that fails:</strong> the <a href="#kruskal">Kruskal-Wallis test</a>.</p>
@@ -465,6 +519,9 @@ pairs of groups differ.</p>
 of at least one false alarm isn't 5% — it's about <strong>%%fw%%</strong> (1 &minus; 0.95<sup>6</sup>). Every extra
 test is another lottery ticket for a fluke. Running many t-tests instead of ANOVA + corrected pairwise tests
 is exactly this mistake.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> The knowledge situation is ANOVA's — every
+population value is estimated — plus one thing we know <em>exactly</em>: how many tests we're about to run
+(6). Bonferroni spends that knowledge: the more comparisons, the stricter each one's bar.</p>
 <p><strong>The Bonferroni fix:</strong> multiply each p-value by the number of tests (equivalently, judge
 each against &alpha;/6 &asymp; 0.008). Simple, a bit conservative, and the right default. On the weight-loss
 data:</p>
@@ -486,9 +543,13 @@ pg.pairwise_tests(data=df, dv='loss', between='program', padjust='bonf')
 <p><strong>Example:</strong> 14 surgical-site infections in 200 surgeries (7.0%) vs a published benchmark of
 5%. z = %%z1p%%, %%p1p%% &rarr; <strong>fail to reject H<sub>0</sub></strong>. Read that the courtroom way: not
 proof our rate <em>is</em> 5% — just not enough evidence to say it differs.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> We know the benchmark rate (5%, published)
+and our own counts (14 infections out of 200 surgeries). We don't know our hospital's true underlying rate.
+But under the null, the rate is assumed to be 5% — and a rate carries its own spread — so even the standard
+error is fully determined by things we know. Nothing has to be estimated, so there's no t charge: plain z.</p>
 <div class="warn"><strong>Why z here, not t?</strong> A proportion carries its own standard error:
 SE = &radic;(p(1&minus;p)/n). There's no separate spread to estimate from the sample the way a mean forces you
-to estimate &sigma; — and it's estimating &sigma; that earns the t distribution its fatter tails. With the SE
+to estimate the population standard deviation — and it's that estimating that earns the t distribution its fatter tails. With the SE
 coming from the proportion itself, the plain normal (z) is the right reference, once n is large enough for the
 normal approximation to the binomial.</div>
 <p class="assump"><strong>Assumptions:</strong> independent cases; np and n(1&minus;p) both &ge; ~10 under the
@@ -508,6 +569,11 @@ proportions_ztest(count=14, nobs=200, value=0.05)   # value = benchmark under H0
 <p><strong>Example:</strong> 30-day readmissions: 15 of 150 patients (10%) on a new follow-up program vs 32
 of 160 (20%) on standard care. z = %%z2p%%, %%p2p%% &rarr; <strong>reject H<sub>0</sub></strong>: the program's
 readmission rate is lower.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> We know both samples' counts. We don't
+know either group's true rate, and there's no benchmark — each group is the other's reference. Under the
+null ("the two true rates are really the same"), the samples are pooled into one best estimate of that
+shared rate, and the pooled rate fixes the standard error. Once again nothing is left dangling to estimate,
+so it's z, not t.</p>
 <p class="assump"><strong>Assumptions:</strong> independent groups; each cell count &ge; ~10.
 <strong>Worth knowing:</strong> this test is mathematically the same as a chi-squared test of independence on
 the 2&times;2 table — two doors into the same room.</p>
@@ -528,6 +594,11 @@ independent — big gaps make a big &chi;&sup2;.</p>
 155 no COPD; non-smokers 20 / 280. &chi;&sup2; = %%chi2%%, %%chi2_p%% &rarr;
 <strong>reject H<sub>0</sub></strong>: smoking and COPD are associated. (Associated — not proven causal; that's
 a design question, not a test question.)</p>
+<p class="know"><strong>What we know, and what we don't.</strong> We know the observed counts — they're our
+data. We don't know whether the variables are associated. The expected counts aren't extra knowledge:
+they're computed from the table's own row and column totals — they're what the table <em>would</em> look like
+if independence were true. The test measures the distance between the table we got and the table
+independence predicts.</p>
 <p class="assump"><strong>Assumptions:</strong> work with counts, never percentages; independent observations;
 the <em>expected</em> count is &ge; 5 in every cell (here the smallest expected count is %%min_exp%%).</p>
 <p class="fallback"><strong>If expected counts are too small</strong> (2&times;2 table): Fisher's exact test.</p>
@@ -547,6 +618,10 @@ counts match a hypothesized distribution.</p>
 Wed 150, Thu 152, Fri 158, Sat 135, Sun 140 — against a uniform expectation of ~157 per day.
 &chi;&sup2; = %%gof%%, %%gof_p%% &rarr; <strong>reject H<sub>0</sub></strong>: arrivals are not spread evenly;
 Mondays spike.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> We know the observed counts, and we know
+the hypothesized distribution completely — "spread uniformly" hands us every expected count on a plate.
+We don't know whether reality follows it. That's the entire test: one fully specified prediction vs the
+counts that actually arrived.</p>
 <p class="assump"><strong>Assumptions:</strong> counts, not proportions; expected count &ge; 5 in every
 category.</p>
 <details><summary>Data structure + Python code</summary><div class="body">
@@ -572,6 +647,10 @@ ranks balance.</p>
 <p><strong>Example:</strong> pain scores (0–10) before and after physical therapy for 14 back-pain patients —
 an ordinal scale, so ranks, not means. W = %%wil_W%%, %%wil_p%% &rarr; <strong>reject H<sub>0</sub></strong>:
 pain dropped. (W = 0 is as one-sided as it gets: every patient's pain went down.)</p>
+<p class="know"><strong>What we know, and what we don't.</strong> We know each patient's two scores. We
+assume <em>nothing</em> about any population mean or population standard deviation — pain scores are ordinal
+labels, so a "population standard deviation of pain" barely means anything. Giving up those unknowns is
+exactly why the test works on the ranks of the differences instead of the differences themselves.</p>
 <details><summary>Data structure + Python code</summary><div class="body">
 <p>Data: two aligned arrays — row i is the same patient in both.</p>
 <pre><code>import pingouin as pg
@@ -589,6 +668,10 @@ rank above a random patient from the other — so report medians alongside it.</
 <p><strong>Example:</strong> wait times at two clinics (minutes, heavily right-skewed): median %%wait_med_a%%
 at Clinic A vs %%wait_med_b%% at Clinic B, 28 patients each. U = %%mwu_U%%, %%mwu_p%% &rarr;
 <strong>reject H<sub>0</sub></strong>: the waits genuinely differ.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> We know the two samples of wait times.
+We don't assume a population mean or population standard deviation for either clinic — wait times are
+skewed, so those summaries would mislead anyway. The test trusts only the ordering: pool all 56 waits,
+rank them, and ask whether one clinic's ranks pile up at the slow end.</p>
 <details><summary>Data structure + Python code</summary><div class="body">
 <p>Data: two arrays, one per group.</p>
 <pre><code>import pingouin as pg
@@ -605,6 +688,9 @@ to Wilcoxon-Mann-Whitney what ANOVA is to the t-test.)</p>
 H = %%kw_H%%, %%kw_p%% &rarr; <strong>reject H<sub>0</sub></strong>: the clinics differ. Follow up with
 pairwise Mann-Whitney tests plus a Bonferroni correction, exactly as in the
 <a href="#pairwise">pairwise section</a>.</p>
+<p class="know"><strong>What we know, and what we don't.</strong> The same stance as Mann-Whitney, one
+dimension up: we know the four samples, assume no population means or population standard deviations,
+and compare the clinics purely on how their satisfaction ranks interleave.</p>
 <details><summary>Data structure + Python code</summary><div class="body">
 <p>Data: a long-format table — one row per patient, score column + clinic column.</p>
 <pre><code>import pingouin as pg
@@ -617,7 +703,7 @@ pg.kruskal(data=df, dv='score', between='clinic')</code></pre>
 <h2 id="cheat">The one-table cheat sheet</h2>
 <table>
 <tr><th>Test</th><th>Use it when</th><th>Key assumption</th><th>If it fails, use</th></tr>
-<tr><td><a href="#ztest">z-test</a></td><td>Mean vs benchmark, &sigma; known</td><td>&sigma; known; n &ge; ~30</td><td>— (that's the t-test)</td></tr>
+<tr><td><a href="#ztest">z-test</a></td><td>Mean vs benchmark, population standard deviation known</td><td>Population standard deviation known; n &ge; ~30</td><td>— (that's the t-test)</td></tr>
 <tr><td><a href="#t1">One-sample t</a></td><td>Mean vs benchmark</td><td>Roughly normal, or n &ge; ~30</td><td><a href="#wilcoxon">Wilcoxon</a> (vs the benchmark)</td></tr>
 <tr><td><a href="#t2">Two-sample t</a></td><td>Two group means</td><td>Normal-ish per group, or n &ge; ~30 each</td><td><a href="#mwu">Mann-Whitney U</a></td></tr>
 <tr><td><a href="#paired">Paired t</a></td><td>Before/after means</td><td>Differences roughly normal</td><td><a href="#wilcoxon">Wilcoxon signed-rank</a></td></tr>
@@ -746,7 +832,7 @@ function choose(){
   } else {
     if(c==='bench'){
       if(s==='skew'){ txt='Wilcoxon signed-rank test (one-sample form) against the benchmark — skewed data, so ranks beat means.'; href='#wilcoxon'; }
-      else { txt='One-sample t-test — or the z-test above it if the population SD is genuinely known.'; href='#t1'; }
+      else { txt='One-sample t-test — or the z-test above it if the population standard deviation is genuinely known.'; href='#t1'; }
     } else if(c==='two'){
       if(p==='yes'){
         if(s==='skew'){ txt='Wilcoxon signed-rank test — paired data, but skewed or ordinal: rank the differences.'; href='#wilcoxon'; }
