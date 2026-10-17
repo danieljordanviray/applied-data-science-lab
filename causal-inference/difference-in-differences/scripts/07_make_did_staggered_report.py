@@ -38,7 +38,7 @@ pre {{ background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto;
 <div class="topnav"><a href="../../docs/index.html">\u2190 Homepage</a></div>
 
 <h1>Staggered Difference in Differences — when everyone starts at different times</h1>
-<p class="small">Methods case study · synthetic data, planted effects per start month
+<p class="small">October 11, 2026 · Methods case study · synthetic data, planted effects per start month
 (&minus;4 / &minus;3 / &minus;2 kg), true overall effect &minus;3.0 kg — the answer key
 exists, so everything is checkable. Assumes you know plain difference-in-differences.</p>
 
