@@ -30,7 +30,8 @@ pre {{ background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto;
 
 
 <h1>Case study: Difference-in-Differences — did the program work?</h1>
-<p class="small">October 10, 2026 · Methods case study · synthetic data with a planted true effect of +5 points,
+<p class="small">October 10, 2026</p>
+<p class="small">Methods case study · synthetic data with a planted true effect of +5 points,
 so every claim below is checkable against an answer key we wrote ourselves.</p>
 
 <h2>The story</h2>
