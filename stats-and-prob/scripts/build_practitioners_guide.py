@@ -221,11 +221,7 @@ HEAD = """<!DOCTYPE html>
 <p class="lede">Ever stared at a dataset and wondered: z-test or t-test? ANOVA or Kruskal-Wallis?
 And what <em>is</em> a Wilcoxon signed-rank test, anyway? This guide is a method bank — every common test on one
 page: when to use it, a healthcare example with real output, the assumptions to check, the fallback test when
-those assumptions fail, and the Python code (click to expand). Built for future me, and for anyone learning
-these for the first time.</p>
-<div class="box"><strong>How to read the numbers:</strong> every statistic on this page was computed by running
-the exact code in the dropdowns on the toy datasets described — a build script asserts each result before the
-page is written, so nothing here is typed in from memory.</div>
+those assumptions fail, and the Python code (click to expand).</p>
 
 <h2>Not sure which test? Answer three questions</h2>
 <div class="box">
@@ -319,7 +315,6 @@ cost. Does it?</em> The contract decision is adopt-if-cheaper; a cost <em>increa
 "don't adopt" as no change, so only the left tail carries evidence.</p>
 <p class="hyp"><strong>Null:</strong> the population mean monthly cost per member is still $850 (the program saved nothing).<br>
 <strong>Alternative:</strong> the population mean monthly cost per member is <em>less than</em> $850.</p>
-<p>When in doubt, go two-tailed — it's the honest default, and it's what every example later in this guide uses.</p>
 <svg id="tailsSvg" viewBox="0 0 640 240" role="img" aria-label="Normal curve with rejection regions shaded"></svg>
 <div class="ctl">
 <button data-tail="two" class="on">Two-tailed</button>
@@ -590,10 +585,18 @@ proportions_ztest(count=np.array([15, 32]), nobs=np.array([150, 160]))</code></p
 <p class="use"><strong>Use it when:</strong> two categorical variables, and you're asking whether they're
 associated. In one line: compare the counts you observed with the counts you'd expect if the variables were
 independent — big gaps make a big &chi;&sup2;.</p>
-<p><strong>Example:</strong> smoking status vs COPD diagnosis in a screening sample of 500: smokers 45 COPD /
-155 no COPD; non-smokers 20 / 280. &chi;&sup2; = %%chi2%%, %%chi2_p%% &rarr;
-<strong>reject H<sub>0</sub></strong>: smoking and COPD are associated. (Associated — not proven causal; that's
-a design question, not a test question.)</p>
+<p><strong>Example:</strong> smoking status vs COPD diagnosis in a screening sample of 500 people:</p>
+<table>
+<tr><th></th><th>COPD</th><th>No COPD</th><th>Total</th></tr>
+<tr><th>Smoker</th><td>45 (26)</td><td>155 (174)</td><td>200</td></tr>
+<tr><th>Non-smoker</th><td>20 (39)</td><td>280 (261)</td><td>300</td></tr>
+<tr><th>Total</th><td>65</td><td>435</td><td>500</td></tr>
+</table>
+<p class="small">Observed counts — with the count expected if smoking and COPD were independent in
+parentheses. Expected counts come from the table's own totals: (row total &times; column total) / 500.</p>
+<p>Read the COPD column: 45 smokers have COPD, where independence predicts only 26. That pile-up is the
+signal. &chi;&sup2; = %%chi2%%, %%chi2_p%% &rarr; <strong>reject H<sub>0</sub></strong>: smoking and COPD are
+associated. (Associated — not proven causal; that's a design question, not a test question.)</p>
 <p class="know"><strong>What we know, and what we don't.</strong> We know the observed counts — they're our
 data. We don't know whether the variables are associated. The expected counts aren't extra knowledge:
 they're computed from the table's own row and column totals — they're what the table <em>would</em> look like
