@@ -11,6 +11,9 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
 
 - **Stats & Probability → [p-values-power-playground](stats-and-prob/p-values-power-playground/)**
   — Statistical Significance, Visualized: an interactive p-value & power playground
+- **Stats & Probability → [practitioners-guide](stats-and-prob/practitioners-guide/)**
+  — The Practitioner's Guide to Statistical Tests: a one-page method bank (z, t,
+  ANOVA, proportions, chi-squared, rank tests) with verified toy healthcare examples
 - **Causal Inference → [difference-in-differences](causal-inference/difference-in-differences/)**
   — Difference-in-Differences, plus the staggered-timing version
 - **SQL → [sql](sql/)** — EXISTS vs IN/NOT IN, COALESCE/NULLIF, window functions,
