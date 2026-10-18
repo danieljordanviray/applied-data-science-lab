@@ -11,6 +11,10 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
 
 - **Stats & Probability → [p-values-power-playground](stats-and-prob/p-values-power-playground/)**
   — Statistical Significance, Visualized: an interactive p-value & power playground
+- **Stats & Probability → [regression-guide](stats-and-prob/regression-guide/)**
+  — The Practitioner's Guide to Regression: a one-page method bank (OLS fitting
+  and prediction, transformations, fit metrics, diagnostic plots, influence,
+  logistic regression, confusion matrix) with verified toy healthcare examples
 - **Stats & Probability → [practitioners-guide](stats-and-prob/practitioners-guide/)**
   — The Practitioner's Guide to Statistical Tests: a one-page method bank (z, t,
   ANOVA, proportions, chi-squared, rank tests) with verified toy healthcare examples
