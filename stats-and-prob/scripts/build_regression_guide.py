@@ -17,6 +17,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+matplotlib.rcParams["font.sans-serif"] = ["DejaVu Sans"]
 plt.rcParams.update({"svg.fonttype": "none", "font.size": 9,
                      "axes.edgecolor": "#888", "axes.labelcolor": "#222",
                      "xtick.color": "#555", "ytick.color": "#555"})
@@ -29,14 +30,15 @@ def check(name, cond, detail=""):
         FAILURES.append(name)
 
 import re as _re
-def svg_of(fig):
+def svg_of(fig, dpi=60):
     buf = io.StringIO()
-    fig.savefig(buf, format="svg", bbox_inches="tight", dpi=60)
+    fig.savefig(buf, format="svg", bbox_inches="tight", dpi=dpi)
     plt.close(fig)
     s = buf.getvalue()
     s = s[s.index("<svg"):]
     s = _re.sub(r"<metadata>.*?</metadata>", "", s, flags=_re.S)
     s = _re.sub(r"\d+\.\d{3,}", lambda m: f"{float(m.group()):.1f}", s)
+    s = _re.sub(r">\s+<", "><", s)
     return s
 
 # ------------------------------------------------------------- main OLS -----
@@ -71,6 +73,7 @@ check("RSE > in-sample RMSE (df correction)", rse > rmse, f"RSE={rse:.0f} RMSE={
 check("adjusted R2 < R2", fit.rsquared_adj < fit.rsquared,
       f"adj={fit.rsquared_adj:.3f} vs {fit.rsquared:.3f}")
 check("MAPE sane", 5 < mape < 60, f"MAPE={mape:.1f}%")
+mse = sse / n
 
 # ------------------------------------------------- transformation example ---
 # Dose (mg) -> % symptom reduction. Truth is log-dose: diminishing returns.
@@ -90,20 +93,20 @@ ax.axhline(0, color="#c0392b", lw=1)
 ax.scatter(fitted, resid, s=13, rasterized=True, color="#2b50aa", alpha=.75)
 ax.set_xlabel("Fitted cost ($)"); ax.set_ylabel("Residual ($)")
 ax.set_title("Residuals vs fitted")
-PLOT_RESID = svg_of(fig)
+PLOT_RESID = svg_of(fig, dpi=75)
 
 std_resid = resid / (rse * np.sqrt(1 - fit.get_influence().hat_matrix_diag))
 fig, ax = plt.subplots(figsize=(5.4, 3.1))
 sm.qqplot(std_resid, line="45", fit=False, ax=ax,
           markerfacecolor="#2b50aa", markeredgecolor="none", alpha=.75, rasterized=True)
 ax.set_title("Normal Q-Q (standardized residuals)")
-PLOT_QQ = svg_of(fig)
+PLOT_QQ = svg_of(fig, dpi=75)
 
 fig, ax = plt.subplots(figsize=(5.4, 3.1))
 ax.scatter(fitted, np.sqrt(np.abs(std_resid)), s=13, rasterized=True, color="#2b50aa", alpha=.75)
 ax.set_xlabel("Fitted cost ($)"); ax.set_ylabel("sqrt(|standardized residual|)")
 ax.set_title("Scale-location")
-PLOT_SCALE = svg_of(fig)
+PLOT_SCALE = svg_of(fig, dpi=75)
 
 # ---------------------------------- outliers / leverage / influence ---------
 # Small clinic dataset: age -> cost, with three planted troublemakers.
@@ -125,20 +128,21 @@ check("leverage-only point: high hat, low Cook's", hats[11] > hats[3] and cooks[
 check("outlier point: big residual, modest leverage", abs(infl.resid_studentized_external[3]) > 2.5,
       f"studentized resid={infl.resid_studentized_external[3]:.1f}")
 
-fig, ax = plt.subplots(figsize=(5.6, 3.4))
-sizes = 40 + 2600 * cooks
+fig, ax = plt.subplots(figsize=(5.3, 3.2))
+sizes = 30 + 1700 * cooks
 ax.scatter(ax_, ay, s=sizes, rasterized=True, color="#2b50aa", alpha=.45)
 xs = np.array([20, 100])
 ax.plot(xs, cfit.params.iloc[0] + cfit.params.iloc[1] * xs, color="#c0392b", lw=1.2)
-for idx, lab, dx, dy in [(3, "outlier\n(big residual)", -16, 900),
-                         (11, "leverage only\n(on trend)", -34, 700),
-                         (22, "influential\n(leverage x residual)", -52, -1400)]:
-    ax.annotate(lab, (ax_[idx], ay[idx]), xytext=(ax_[idx] + dx, ay[idx] + dy),
+ax.set_xlim(14, 103); ax.set_ylim(0, 14500)
+for idx, lab, tx, ty in [(3, "outlier\n(big residual)", 17, 10200),
+                         (11, "leverage only\n(on the trend)", 62, 11800),
+                         (22, "influential\n(pulls the line)", 34, 600)]:
+    ax.annotate(lab, (ax_[idx], ay[idx]), xytext=(tx, ty),
                 fontsize=8, color="#333",
                 arrowprops=dict(arrowstyle="-", color="#666", lw=.7))
 ax.set_xlabel("Age"); ax.set_ylabel("Cost ($)")
 ax.set_title("Bubble size = Cook's distance")
-PLOT_INFL = svg_of(fig)
+PLOT_INFL = svg_of(fig, dpi=102)
 
 # ------------------------------------------------------------- logistic -----
 # 30-day readmission from a risk score (0-100). Truth is logistic in score.
@@ -173,21 +177,26 @@ def conf_at(thr):
     return tp, fp, tn, fn
 c50 = conf_at(0.5)
 acc50 = (c50[0] + c50[2]) / n2
+_pt = lfit.pred_table()
+check("pred_table() matches manual counts @0.5",
+      int(_pt[0, 0]) == c50[2] and int(_pt[0, 1]) == c50[1]
+      and int(_pt[1, 0]) == c50[3] and int(_pt[1, 1]) == c50[0],
+      f"pred_table={_pt.ravel().astype(int).tolist()}")
 check("logistic accuracy at 0.5 sane", 0.6 < acc50 < 0.92, f"acc={acc50:.2f}")
 print("confusion @0.5 (TP,FP,TN,FN):", c50, " @0.3:", conf_at(0.3))
 
 # Linear-vs-logistic motivating plot.
 lin = ols("readmit ~ score", data=rd).fit()
-fig, ax = plt.subplots(figsize=(5.6, 3.3))
-ax.scatter(score, readmit + rng.normal(0, .03, n2), s=10, rasterized=True, color="#2b50aa", alpha=.5)
+fig, ax = plt.subplots(figsize=(5.3, 3.05))
+ax.scatter(score, readmit + rng.normal(0, .03, n2), s=9, rasterized=True, color="#2b50aa")
 xs = np.linspace(0, 100, 50)
-ax.plot(xs, lin.params.iloc[0] + lin.params.iloc[1] * xs, color="#c0392b", lw=1.4,
+ax.plot(xs, lin.params.iloc[0] + lin.params.iloc[1] * xs, color="#c0392b", lw=1.1, ls=(0, (4, 2)),
         label="linear fit (escapes 0-1)")
-ax.plot(xs, 1 / (1 + np.exp(-(b0 + b1 * xs))), color="#277da1", lw=2, label="logistic fit")
+ax.plot(xs, 1 / (1 + np.exp(-(b0 + b1 * xs))), color="#1b7f5a", lw=3.2, label="logistic fit")
 ax.axhline(0, color="#bbb", lw=.8); ax.axhline(1, color="#bbb", lw=.8)
 ax.set_ylim(-.35, 1.35); ax.set_xlabel("Risk score"); ax.set_ylabel("Readmitted (0/1)")
 ax.set_title("Same data, two fits"); ax.legend(fontsize=8, frameon=False)
-PLOT_LOGMOT = svg_of(fig)
+PLOT_LOGMOT = svg_of(fig, dpi=102)
 
 if FAILURES:
     raise SystemExit(f"ASSERTION FAILURES: {FAILURES}")
@@ -203,7 +212,7 @@ V = dict(
     b_urg=money(fit.params["C(admission)[T.Urgent]"]),
     b_inter=money(fit.params.iloc[0]),
     pred=money(pred), planted=money(planted),
-    rmse=money(rmse), rse=money(rse), mae=money(mae), mape=f"{mape:.0f}",
+    rmse=money(rmse), rse=money(rse), mae=money(mae), mape=f"{mape:.0f}", mse=f"{mse:,.0f}",
     sse_b=f"{sse/1e9:.2f}", sst_b=f"{sst/1e9:.2f}",
     r2_raw=f"{r2_raw:.2f}", r2_logx=f"{r2_logx:.2f}",
     cook_max=f"{cooks[22]:.2f}", cook_thresh=f"{4/m:.2f}",
@@ -213,6 +222,13 @@ V = dict(
     tp=c50[0], fp=c50[1], tn=c50[2], fn=c50[3], acc50=f"{acc50:.0%}", n2=n2,
     n_pos=int(readmit.sum()),
 )
+def sgn(v):
+    return ("+" if v >= 0 else "\u2212") + f"${abs(v):,.0f}"
+EX_ROWS = "\n".join(
+    f"<tr><td>Patient {i + 1}</td><td>{money(a)}</td><td>{money(f)}</td>"
+    f"<td>{sgn(a - f)}</td><td>{(a - f) ** 2:,.0f}</td></tr>"
+    for i, (a, f) in enumerate(
+        [(float(hosp["cost"].iloc[j]), float(fit.fittedvalues.iloc[j])) for j in range(3)]))
 LOG_ROWS = "\n".join(
     f"<tr><td>{r['x']}</td><td>{r['y']}</td><td>{r['p']:.2f}</td><td>{r['pred']}</td>"
     f"<td>{r['odds']:.2f}</td><td>{r['logodds']:.2f}</td></tr>" for r in rows)
@@ -249,6 +265,7 @@ th{background:var(--soft)}
 .ctl button.on{background:var(--accent); color:#fff; border-color:var(--accent)}
 input[type=range]{accent-color:var(--accent)}
 .readout{background:var(--soft); border-radius:8px; padding:10px 14px; font-size:.97em; margin:.5em 0}
+.sketch{display:block; margin-bottom:5px}
 .plot{margin:.6em 0}
 .plot svg{max-width:100%; height:auto; display:block; margin:0 auto}
 svg text{font-family:Helvetica,Arial,sans-serif}
@@ -339,8 +356,9 @@ fit.predict(new_patient)    # -> %%pred%%</code></pre>
 
 <h3 id="transforms">Transformations: making it linear, and back-transforming to interpret</h3>
 <p>OLS fits straight lines in the variables you <em>give</em> it — nothing says you must hand it the raw
-variables. When a relationship bends, transform a variable until the bend straightens, fit the line there,
-then back-transform the answer to say it in original units. Example: drug dose vs symptom reduction, where
+variables. When a relationship bends, transform a variable until the bend straightens (in practice: add
+a transformed column to your data, and put that column in the formula), fit the line there, then
+back-transform the answer to say it in original units. Example: drug dose vs symptom reduction, where
 each doubling of the dose buys roughly the same benefit (diminishing returns). Try it:</p>
 <svg id="trSvg" viewBox="0 0 640 310" role="img" aria-label="Dose response scatter with fitted line under different transformations"></svg>
 <div class="ctl">
@@ -356,28 +374,28 @@ strongly, square root gently. A bend that <em>accelerates upward</em> asks for t
 with a square. And a fan-shaped residual plot (errors growing with the prediction) is the same story told
 about the outcome: compress y.</p>
 <table>
-<tr><th>Transformation</th><th>What it does</th><th>Reach for it when</th><th>Reading the result</th></tr>
-<tr><td><strong>log(y)</strong></td><td>Pulls in a long right tail; effects become multiplicative</td>
-<td>The classic move for right-skewed outcomes: costs, incomes, many lab values</td>
+<tr><th>Transformation</th><th>What the raw data looks like — reach for it when&hellip;</th><th>What it does</th><th>Reading the result</th></tr>
+<tr><td><strong>log(y)</strong></td><td><svg class="sketch" viewBox="0 0 104 58" width="104" height="60" aria-hidden="true"><circle cx="8" cy="50" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="16" cy="49" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="24" cy="48" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="32" cy="47" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="40" cy="45" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="48" cy="42" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="56" cy="38" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="64" cy="32" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="72" cy="24" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="80" cy="14" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="88" cy="8" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="56" cy="45" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="64" cy="39" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="72" cy="32" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="80" cy="23" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="88" cy="18" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="95" cy="11" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="95" cy="27" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><line x1="2" y1="54" x2="102" y2="54" stroke="#c9cfdb" stroke-width="1.5"/></svg>The scatter takes off as x grows — the outcomes fan out into a long upper tail of very large values. Costs are the textbook case.</td>
+<td>Pulls in a long right tail; effects become multiplicative</td>
 <td>A one-unit rise in x changes y by about &beta;&times;100% (exactly: multiplies y by e<sup>&beta;</sup>)</td></tr>
-<tr><td><strong>sqrt(y)</strong></td><td>A gentler log(y)</td>
-<td>Mild skew; counts-like outcomes where spread grows with the level</td>
+<tr><td><strong>sqrt(y)</strong></td><td><svg class="sketch" viewBox="0 0 104 58" width="104" height="60" aria-hidden="true"><circle cx="8" cy="50" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="18" cy="44" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="28" cy="39" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="38" cy="35" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="48" cy="31" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="58" cy="28" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="68" cy="25" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="78" cy="22" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="88" cy="20" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="98" cy="18" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="48" cy="38" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="62" cy="36" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="76" cy="33" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="90" cy="30" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="98" cy="27" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><line x1="2" y1="54" x2="102" y2="54" stroke="#c9cfdb" stroke-width="1.5"/></svg>The scatter rises with a spread that grows moderately — counts-like data. Often applied to both sides at once when the predictor is a skewed count too (the course's advertising example square-roots both spend and impressions).</td>
+<td>A gentler log(y)</td>
 <td>Square the predictions to get back to original units</td></tr>
-<tr><td><strong>1/y (inverse)</strong></td><td>The strongest tail-pull of the three</td>
-<td>Very strong skew; amounts that are really times or rates underneath</td>
+<tr><td><strong>1/y (inverse)</strong></td><td><svg class="sketch" viewBox="0 0 104 58" width="104" height="60" aria-hidden="true"><circle cx="8" cy="8" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="12" cy="16" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="16" cy="24" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="22" cy="32" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="30" cy="38" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="40" cy="43" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="52" cy="46" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="64" cy="48" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="76" cy="50" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="88" cy="51" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="98" cy="52" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="10" cy="21" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="20" cy="36" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="34" cy="44" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="58" cy="49" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><line x1="2" y1="54" x2="102" y2="54" stroke="#c9cfdb" stroke-width="1.5"/></svg>The scatter crashes: enormous values at small x, collapsing toward zero. The outcome is usually a time or a rate underneath.</td>
+<td>The strongest tail-pull of the three</td>
 <td>Signs flip — safest to back-transform predictions (take the reciprocal) and read those</td></tr>
-<tr><td><strong>log(x)</strong></td><td>Compresses big x values</td>
-<td>Diminishing returns in x: dose, spending, days on a therapy</td>
+<tr><td><strong>log(x)</strong></td><td><svg class="sketch" viewBox="0 0 104 58" width="104" height="60" aria-hidden="true"><path d="M6 50 C 28 24, 52 13, 98 8" fill="none" stroke="#2b50aa" stroke-width="1.4" stroke-opacity="0.4"/><circle cx="8" cy="50" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="16" cy="36" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="26" cy="28" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="38" cy="22" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="52" cy="17" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="68" cy="14" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="84" cy="11" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="98" cy="9" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="20" cy="41" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="33" cy="26" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="47" cy="20" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="61" cy="15" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="77" cy="13" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="92" cy="10" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><line x1="2" y1="54" x2="102" y2="54" stroke="#c9cfdb" stroke-width="1.5"/></svg>The scatter rises steeply, then flattens: each extra unit of x buys less than the one before — diminishing returns (dose, spending, days on a therapy).</td>
+<td>Compresses big x values</td>
 <td>A 1% rise in x moves y by about &beta;/100; a doubling of x moves y by about 0.69&times;&beta;</td></tr>
-<tr><td><strong>sqrt(x)</strong></td><td>Milder compression of x</td>
-<td>Gentler diminishing returns</td>
+<tr><td><strong>sqrt(x)</strong></td><td><svg class="sketch" viewBox="0 0 104 58" width="104" height="60" aria-hidden="true"><path d="M6 50 C 32 31, 58 21, 98 15" fill="none" stroke="#2b50aa" stroke-width="1.4" stroke-opacity="0.4"/><circle cx="8" cy="50" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="18" cy="41" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="30" cy="35" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="44" cy="29" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="60" cy="24" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="76" cy="20" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="90" cy="17" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="98" cy="15" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="24" cy="38" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="38" cy="31" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="54" cy="26" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="70" cy="21" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="86" cy="18" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><line x1="2" y1="54" x2="102" y2="54" stroke="#c9cfdb" stroke-width="1.5"/></svg>The same flattening, but gentler.</td>
+<td>Milder compression of x</td>
 <td>Slope is per unit of sqrt(x) — back-transform examples rather than quoting the slope</td></tr>
-<tr><td><strong>x&sup2;</strong> (fit x and x&sup2;)</td><td>Lets one predictor bend once: a U or an upside-down U</td>
-<td>Risk or response is best in the middle — BMI vs risk is the classic shape</td>
+<tr><td><strong>x&sup2;</strong> (fit x and x&sup2;)</td><td><svg class="sketch" viewBox="0 0 104 58" width="104" height="60" aria-hidden="true"><path d="M6 8 Q 52 68, 98 8" fill="none" stroke="#2b50aa" stroke-width="1.4" stroke-opacity="0.4"/><circle cx="8" cy="10" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="18" cy="24" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="28" cy="34" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="40" cy="41" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="52" cy="44" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="64" cy="41" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="76" cy="34" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="88" cy="24" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="98" cy="10" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="24" cy="28" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="46" cy="43" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="70" cy="30" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="84" cy="20" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><line x1="2" y1="54" x2="102" y2="54" stroke="#c9cfdb" stroke-width="1.5"/></svg>The scatter curves like a smile (or a frown): the middle is the extreme — risk lowest at middling BMI is the classic shape. Also the geometry of areas.</td>
+<td>Lets one predictor bend once: a U or an upside-down U</td>
 <td>No single slope exists; plot the curve and quote values off it</td></tr>
-<tr><td><strong>x&sup3;</strong> (cubed)</td><td>Very sharp acceleration</td>
-<td>Rarely the real answer — listed for completeness; a bending-twice relationship usually wants a different tool</td>
-<td>As with x&sup2;: plot, don't quote</td></tr>
+<tr><td><strong>x&sup3;</strong> (cubed)</td><td><svg class="sketch" viewBox="0 0 104 58" width="104" height="60" aria-hidden="true"><path d="M6 52 C 45 51, 68 42, 98 6" fill="none" stroke="#2b50aa" stroke-width="1.4" stroke-opacity="0.4"/><circle cx="8" cy="51" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="20" cy="50" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="32" cy="50" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="44" cy="49" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="56" cy="47" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="66" cy="43" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="76" cy="36" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="84" cy="27" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="92" cy="16" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="98" cy="7" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="26" cy="51" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="50" cy="48" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="70" cy="40" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><circle cx="88" cy="21" r="2.3" fill="#2b50aa" fill-opacity="0.78"/><line x1="2" y1="54" x2="102" y2="54" stroke="#c9cfdb" stroke-width="1.5"/></svg>The scatter hugs the floor, then takes off like a hockey stick — the geometry of volumes (the course's perch grow in mass at roughly length cubed, and cubing the length straightens the relationship completely).</td>
+<td>Sharp acceleration</td>
+<td>As with x&sup2;: plot, don't quote a single slope</td></tr>
 </table>
 <div class="warn"><strong>Back-transformation, the part everyone forgets:</strong> a model fitted to log(cost)
 predicts log-dollars. Exponentiate the prediction to get dollars back. Two consequences: the coefficient
@@ -385,34 +403,53 @@ reads as a <em>percentage</em> change rather than a dollar change, and the expon
 near the <em>typical</em> (median) patient rather than the mean — a feature for skewed costs, as long as
 you know it's happening.</div>
 
-<h3 id="metrics">Fit metrics: one family, five summaries</h3>
-<p>Every metric in this section is a summary of the same ingredients: the <strong>residuals</strong>
-(actual &minus; predicted, one per patient). Square them and add them up and you get the
-<strong>sum of squared errors</strong> — for the cost model, SSE &asymp; %%sse_mm%% million squared-dollars.
-Useless on its own, but everything else is a rescaling of it:</p>
+<h3 id="metrics">Fit metrics: from residuals to a grade, step by step</h3>
+<p>Every metric in this section is built from one ingredient, in a few mechanical steps. Walk the chain
+once and the family stops being a list to memorize — including which ones are just rescalings of each
+other.</p>
+<p><strong>Step 1 — residuals.</strong> For every patient the model makes a prediction, and the
+<strong>residual</strong> is what it missed by: actual &minus; predicted. Three of the cost model's 120
+residuals:</p>
 <table>
-<tr><th>Metric</th><th>Formula in words</th><th>Cost model</th><th>Use it when</th></tr>
-<tr><td><strong>RMSE</strong></td><td>Square root of (SSE / n)</td><td>%%rmse%%</td>
-<td>The default "how wrong are we, typically?" — in the outcome's own units. Honest version: computed on
-<em>new</em> data; on the training data it's optimistic.</td></tr>
-<tr><td><strong>Residual standard error (RSE)</strong></td>
-<td>Square root of (SSE / (n &minus; predictors &minus; 1))</td><td>%%rse%%</td>
-<td>RMSE's training-room cousin. Dividing by a smaller number charges the model for each predictor it used,
-so adding junk predictors can't fake an improvement. This is the number R-style output reports.</td></tr>
-<tr><td><strong>MAE</strong></td><td>Average of |residual|</td><td>%%mae%%</td>
-<td>When a few huge errors shouldn't dominate the verdict. Diagnostic pairing: if RMSE is much bigger than
-MAE, a handful of very large misses are running the show.</td></tr>
-<tr><td><strong>MAPE</strong></td><td>Average of |residual / actual|, as a %</td><td>%%mape%%%</td>
-<td>When the audience thinks in percentages, or you're comparing across outcomes with different scales.
-Breaks down when actuals sit near zero — a $50 error on a $60 bill is 83%.</td></tr>
-<tr><td><strong>R&sup2;</strong></td><td>1 &minus; SSE / (total variation in y)</td><td>%%r2%%</td>
-<td>"How much of the variation did we explain?" — a proportion, good for communicating, silent about error
-size in real units. <strong>Adjusted R&sup2;</strong> (%%adj_r2%% here) applies the same per-predictor charge
-as RSE; use it when comparing models with different numbers of predictors.</td></tr>
+<tr><th></th><th>Actual cost</th><th>Predicted</th><th>Residual (actual &minus; predicted)</th><th>Squared error</th></tr>
+%%EX_ROWS%%
 </table>
-<p>So they're not competing metrics — they're siblings. Square the residuals and you get the RMSE/RSE line;
-take absolute values instead and you get MAE; divide by the actuals first and you get MAPE; compare SSE
-against the outcome's total variation and you get R&sup2;.</p>
+<p><strong>Step 2 — square them.</strong> Squaring does two jobs. It makes every miss positive (a $2,000
+overestimate and a $2,000 underestimate are both just wrong by $2,000). And it punishes big misses
+disproportionately: one $4,000 miss counts as much as four $2,000 misses. That second property is a
+<em>choice</em> — one sibling below exists precisely for people who don't want it.</p>
+<p><strong>Step 3 — add them up: SSE.</strong> The <strong>sum of squared errors</strong>. For the cost
+model, SSE &asymp; %%sse_mm%% million — in squared dollars, a unit nobody can think in. That's the point:
+SSE is an ingredient, not a grade. Everything below is a way of turning it into a grade.</p>
+<p><strong>Step 4 — average it, then unsquare it: RMSE.</strong> Divide SSE by the number of patients
+(120) and you get the <strong>mean squared error</strong> (MSE = %%mse%% squared-dollars). Take the square
+root and the units come home: <strong>RMSE = %%rmse%%</strong> — "our typical prediction is off by about
+$1,600." This is the number most people picture when they say a model is accurate to within about X.</p>
+<p><strong>Step 5 — the fairness tweak: RSE.</strong> RMSE divides by n. The <strong>residual standard
+error</strong> divides by n &minus; the number of fitted coefficients (120 &minus; 5 here) instead, so
+every predictor the model uses costs it a little credit — stuffing in junk predictors can't fake a better
+score. RSE = <strong>%%rse%%</strong>, slightly larger than RMSE, exactly as it should be. It's the same
+"typical error," computed the way regression output reports it (and the one-line shortcut is
+<code>np.sqrt(fit.mse_resid)</code>).</p>
+<p><strong>The siblings</strong> — same residuals, different choices along the way:</p>
+<table>
+<tr><th>Metric</th><th>The change</th><th>Cost model</th><th>Use it when</th></tr>
+<tr><td><strong>MAE</strong></td><td>Skip step 2: average the absolute residuals instead of squaring</td><td>%%mae%%</td>
+<td>A few huge misses shouldn't dominate the verdict. Diagnostic pairing: if RMSE is much bigger than MAE,
+a handful of very large misses are running the show.</td></tr>
+<tr><td><strong>MAPE</strong></td><td>Divide each residual by its actual value first, average, as a %</td><td>%%mape%%%</td>
+<td>The audience thinks in percentages, or you're comparing across outcomes with different scales. Breaks
+down when actuals sit near zero — a $50 error on a $60 bill is 83%.</td></tr>
+<tr><td><strong>R&sup2;</strong> (coefficient of determination)</td><td>Compare SSE to the outcome's total variation: 1 &minus; SSE/SST</td><td>%%r2%%</td>
+<td>"How much of the variation did we explain?" — the communication number. <strong>Adjusted R&sup2;</strong>
+(%%adj_r2%%) applies RSE's per-coefficient charge; use it when comparing models with different numbers of
+predictors.</td></tr>
+</table>
+<p><strong>What gets used in practice:</strong> day to day, evaluation usually means <strong>RMSE (or
+MAE) on data the model never trained on</strong> — a held-out test set — because in-sample numbers flatter
+the model. R&sup2; is the number you say out loud ("we explain about %%r2%% of the variation in cost," as a
+proportion). RSE is what you read in regression output and use to compare models fitted to the same data.
+MAPE appears when a business audience wants a percentage and the outcome stays safely away from zero.</p>
 <details><summary>Python code: the whole family from one fit</summary><div class="body">
 <pre><code>import numpy as np
 
@@ -421,15 +458,22 @@ n = len(resid)
 k = 4                                   # slopes: age, los_days, Emergency, Urgent
 sse = float((resid ** 2).sum())
 rmse = np.sqrt(sse / n)                 # %%rmse%%
-rse  = np.sqrt(sse / (n - k - 1))       # %%rse%%
+rse  = np.sqrt(sse / (n - k - 1))       # %%rse%%  (shortcut: np.sqrt(fit.mse_resid))
 mae  = np.abs(resid).mean()             # %%mae%%
 mape = (np.abs(resid) / hosp["cost"]).mean() * 100   # %%mape%%%
 print(fit.rsquared, fit.rsquared_adj)   # %%r2%%, %%adj_r2%%</code></pre>
 </div></details>
 
 <h3 id="diagnostics">Diagnostic plots: what you're looking for, and why</h3>
-<p>Three standard plots, all computed from the cost model's residuals. This model is well-behaved, so
-these show what "fine" looks like — each caption names the trouble pattern it's built to catch.</p>
+<p>Three standard plots, all computed from the cost model's residuals. A good fit's residuals are
+roughly normally distributed with mean zero — each plot below audits one part of that sentence. This
+model is well-behaved, so these show what "fine" looks like — each caption names the trouble pattern
+it's built to catch.</p>
+<p>Think of every prediction as an arrow shot at a bullseye. If the misses spray randomly around the
+target — no pattern to them — your aim is as good as it gets and what's left is noise; no adjustment
+fixes noise. The dangerous case is missing <em>non-randomly</em>: always low on one side, always high on
+the other. A repeatable miss is a fixable miss — it means the model is systematically leaving something
+out. The three plots below are three ways of checking whether your misses are random.</p>
 <p><strong>Residuals vs fitted.</strong> The residuals should form a formless cloud around zero at every
 fitted level. A <em>curve</em> in the cloud means a relationship you didn't model — a bend asking for a
 transformation or an extra term. A <em>funnel</em> (spread widening left to right) means your errors grow
@@ -438,10 +482,16 @@ with the size of the prediction.</p>
 <p><strong>Normal Q-Q plot.</strong> Standardized residuals plotted against where they'd sit if they were
 perfectly normal. On the diagonal line = normal enough. This matters for confidence and prediction
 intervals and for small samples; big samples and point predictions forgive a lot. Tails that peel away at
-both ends mean heavier tails than normal — usually a few extreme patients.</p>
+both ends mean heavier tails than normal — usually a few extreme patients. Said plainly: a good model's
+errors are mostly ordinary-sized — missing by a typical amount, in a random direction, most of the time.
+Points peeling away at the ends mean too many of your errors are extreme compared to that picture, and an
+error pattern is something a model can be adjusted for.</p>
 <div class="plot">%%PLOT_QQ%%</div>
-<p><strong>Scale-location plot.</strong> The square root of the absolute standardized residuals against
-fitted values — the funnel detector with the direction stripped out, so spread is all you see. A flat band
+<p><strong>Scale-location plot.</strong> In plain terms: are you missing by about the same amount all
+the way along the axis, or do the misses get bigger at, say, the high end? If the misses grow somewhere,
+that somewhere is where the model can be changed. Technically, it plots the square root of the absolute
+standardized residuals against fitted values — the funnel detector with the direction stripped out, so
+spread is all you see. A flat band
 means constant error variance (homoscedasticity). A rising trend is the funnel again: bigger predictions,
 bigger misses — often the cue for log(y).</p>
 <div class="plot">%%PLOT_SCALE%%</div>
@@ -464,13 +514,16 @@ the whole fit would move if that point were removed. Rules of thumb: look closer
 %%cook_thresh%%); above 1 (his is %%cook_max%%), definitely investigate. Investigating means: check for a
 data error first, then report the fit with and without the point. It does not mean silently deleting
 inconvenient patients.</p>
+<p class="small">The classic teaching example of all three ideas is a fish dataset, where the single
+most influential observation is one very short roach — leverage 0.31, Cook's distance 1.07. The smallest
+fish in the data has the biggest pull on the line.</p>
 <details><summary>Python code: hat values and Cook's distance</summary><div class="body">
 <pre><code>from statsmodels.formula.api import ols
 
 fit2 = ols("cost ~ age", data=clinic).fit()
-influence = fit2.get_influence()
-hats = influence.hat_matrix_diag        # leverage, one per patient
-cooks = influence.cooks_distance[0]     # Cook's distance, one per patient
+summary = fit2.get_influence().summary_frame()
+hats = summary["hat_diag"]      # leverage, one value per patient
+cooks = summary["cooks_d"]      # Cook's distance, one value per patient
 # flag for a closer look: cooks > 4 / len(clinic)</code></pre>
 <p class="out">Planted results: the influential patient's Cook's distance is %%cook_max%% — the largest in
 the dataset. The on-trend 96-year-old's is 0.08 despite his leverage.</p>
@@ -479,9 +532,10 @@ the dataset. The on-trend 96-year-old's is 0.08 despite his leverage.</p>
 
 BODY2 = r"""
 <h2>Part II — Logistic regression</h2>
-<div class="box"><strong>Read this first:</strong> logistic regression is linear regression's sibling, not a
-different species. If the machinery above — fit a line, read coefficients, grade the fit — is new to you,
-work through <a href="#fit">Part I</a> first; everything here builds on it.</div>
+<div class="box"><strong>Read this first:</strong> logistic regression [a generalized linear model] is
+linear regression's sibling, not a different species. If the machinery above — fit a line, read
+coefficients, grade the fit — is new to you, work through <a href="#fit">Part I</a> first; everything
+here builds on it.</div>
 
 <h3 id="why-logistic">Why logistic? The failure of the straight line</h3>
 <p>New problem: predict whether a patient is <strong>readmitted within 30 days</strong> (yes/no) from a
@@ -528,6 +582,14 @@ start from. (Careful: an odds ratio is not a probability ratio — at high base 
 <p><strong>Log-odds — the model's native language.</strong> This is the straight line actually being
 fitted (%%b0%% + %%b1%% &times; score): add a predictor, add a term; effects are additive here. Nobody
 quotes log-odds to a human — but every other column is a conversion of it, so it's the one to compute in.</p>
+<p>The same trade-offs, at a glance:</p>
+<table>
+<tr><th>Scale</th><th>Easy to interpret?</th><th>Changes easy to read?</th><th>Precise?</th></tr>
+<tr><td>Probability</td><td>Yes</td><td>No — the same slope means different probability jumps at different starting points</td><td>Yes</td></tr>
+<tr><td>Predicted response</td><td>Easiest of all</td><td>Yes</td><td>No — throws away all the gradation</td></tr>
+<tr><td>Odds</td><td>Yes, with practice</td><td>Effects multiply rather than add</td><td>Yes</td></tr>
+<tr><td>Log-odds</td><td>No</td><td>Yes — effects simply add</td><td>Yes</td></tr>
+</table>
 <details><summary>Python code: getting all five from the fit</summary><div class="body">
 <pre><code>import numpy as np
 
@@ -535,28 +597,29 @@ patients = pd.DataFrame({"score": [%%FIVE%%]})   # the five patients in the tabl
 prob = lfit.predict(patients)                    # probabilities, straight from the fit
 log_odds = np.log(prob / (1 - prob))             # invert the squash: back to the line
 odds = prob / (1 - prob)
-pred = (prob >= 0.5).astype(int)                 # the 0.5 threshold, made explicit</code></pre>
+pred = (prob >= 0.5).astype(int)                 # the 0.5 threshold, made explicit (= np.round(prob))</code></pre>
 <p class="out">predict() hands back probabilities. The log-odds is one algebra step away —
 log(p / (1 &minus; p)) — because that formula and the S-curve are exact inverses.</p>
 </div></details>
 
 <h3 id="confusion">The confusion matrix: where every metric comes from</h3>
 <p>Force the readmission model's probabilities into yes/no calls and grade them against what actually
-happened. Four boxes result. Every classification metric you've ever seen is just arithmetic on these
-four numbers — drag the threshold and watch them move:</p>
+happened. Four boxes result. The layout matches statsmodels' <code>pred_table()</code>: rows are what
+actually happened, columns are what the model predicted. Every classification metric you've ever seen is
+just arithmetic on these four numbers — drag the threshold and watch them move:</p>
 <div class="ctl">
 <label>Flag patients whose predicted probability is at least:
 <input type="range" id="thrSlider" min="0.05" max="0.95" step="0.05" value="0.5">
 <strong id="thrVal">0.50</strong></label>
 </div>
 <div class="matrix">
-<div class="hd"></div><div class="hd">Actually readmitted</div><div class="hd">Actually stayed home</div>
-<div class="hd">Flagged</div>
-<div class="cell tp" id="cTP"><span class="lab">True positives</span><span class="n">–</span><span class="sub">flagged, and truly readmitted</span></div>
-<div class="cell fp" id="cFP"><span class="lab">False positives</span><span class="n">–</span><span class="sub">flagged, but stayed home</span></div>
-<div class="hd">Not flagged</div>
-<div class="cell fn" id="cFN"><span class="lab">False negatives</span><span class="n">–</span><span class="sub">missed: readmitted, never flagged</span></div>
+<div class="hd"></div><div class="hd">Predicted: stayed home</div><div class="hd">Predicted: flagged</div>
+<div class="hd">Actually stayed home</div>
 <div class="cell tn" id="cTN"><span class="lab">True negatives</span><span class="n">–</span><span class="sub">not flagged, and stayed home</span></div>
+<div class="cell fp" id="cFP"><span class="lab">False positives</span><span class="n">–</span><span class="sub">flagged, but stayed home</span></div>
+<div class="hd">Actually readmitted</div>
+<div class="cell fn" id="cFN"><span class="lab">False negatives</span><span class="n">–</span><span class="sub">missed: readmitted, never flagged</span></div>
+<div class="cell tp" id="cTP"><span class="lab">True positives</span><span class="n">–</span><span class="sub">flagged, and truly readmitted</span></div>
 </div>
 <div class="chips" id="metricChips"></div>
 <div class="readout" id="cmOut"></div>
@@ -577,12 +640,11 @@ you catch more readmissions (sensitivity climbs) but flag more healthy patients 
 costs climb). Drag it up and the reverse. There is no mathematically best threshold — only the one that
 matches what a missed readmission costs you versus what a false alarm costs you.</div>
 <details><summary>Python code: the matrix at threshold 0.50</summary><div class="body">
-<pre><code>probs = lfit.predict(rd)                               # one probability per patient
-pred = (probs >= 0.5).astype(int)                      # threshold, made explicit
-tp = int(((pred == 1) & (rd["readmit"] == 1)).sum())   # %%tp%%
-fp = int(((pred == 1) & (rd["readmit"] == 0)).sum())   # %%fp%%
-tn = int(((pred == 0) & (rd["readmit"] == 0)).sum())   # %%tn%%
-fn = int(((pred == 0) & (rd["readmit"] == 1)).sum())   # %%fn%%</code></pre>
+<pre><code>conf_matrix = lfit.pred_table()        # rows = actual, columns = predicted; cutoff 0.5
+tn = conf_matrix[0, 0]                 # %%tn%%
+fp = conf_matrix[0, 1]                 # %%fp%%
+fn = conf_matrix[1, 0]                 # %%fn%%
+tp = conf_matrix[1, 1]                 # %%tp%%</code></pre>
 <p class="out">Same four numbers the interactive shows at 0.50 — computed here in Python, there in your
 browser, from the same probabilities.</p>
 </div></details>
@@ -706,7 +768,8 @@ for tok, val in [("%%PLOT_RESID%%", PLOT_RESID), ("%%PLOT_QQ%%", PLOT_QQ),
                  ("%%PLOT_SCALE%%", PLOT_SCALE), ("%%PLOT_INFL%%", PLOT_INFL),
                  ("%%PLOT_LOGMOT%%", PLOT_LOGMOT), ("%%DOSE_JSON%%", DOSE_JSON),
                  ("%%CONF_JSON%%", CONF_JSON), ("%%LOG_ROWS%%", LOG_ROWS),
-                 ("%%FIVE%%", ", ".join(str(r["x"]) for r in rows))]:
+                 ("%%FIVE%%", ", ".join(str(r["x"]) for r in rows)),
+                 ("%%EX_ROWS%%", EX_ROWS)]:
     html = html.replace(tok, val)
 for k, v in V.items():
     html = html.replace(f"%%{k}%%", str(v))
