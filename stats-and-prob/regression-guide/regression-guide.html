@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Practitioner's Guide to Regression — Applied Data Science Lab</title>
+<meta name="description" content="A one-page method bank for regression: fitting OLS in Python, transformations and back-transformations, the fit-metric family (R-squared, RSE, RMSE, MAE, MAPE), diagnostic plots, outliers vs leverage vs influence, logistic regression, and the confusion matrix.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="The Practitioner's Guide to Regression">
+<meta property="og:description" content="Linear or logistic? R-squared or RMSE? One page: fit it, transform it, judge it, diagnose it — with healthcare examples and real output.">
+<meta property="og:url" content="https://danieljordanviray.github.io/applied-data-science-lab/stats-and-prob/regression-guide/regression-guide.html">
+<meta property="og:image" content="https://danieljordanviray.github.io/applied-data-science-lab/stats-and-prob/regression-guide/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Practitioner's Guide to Regression">
+<meta name="twitter:description" content="Linear or logistic? R-squared or RMSE? One page: fit it, transform it, judge it, diagnose it — with healthcare examples and real output.">
+<meta name="twitter:image" content="https://danieljordanviray.github.io/applied-data-science-lab/stats-and-prob/regression-guide/og-image.jpg">
+<style>
+:root{--ink:#1a1a2e; --accent:#2b50aa; --soft:#eef4ff; --warnbg:#fdf3e3; --line:#d9dee9}
+*{box-sizing:border-box}
+body{font-family:Georgia,'Times New Roman',serif; color:var(--ink); max-width:760px; margin:0 auto; padding:28px 20px 70px; line-height:1.62; background:#fff}
+h1{font-size:1.85em; line-height:1.25; margin:.2em 0 .1em}
+h2{font-size:1.35em; margin:1.7em 0 .3em; border-bottom:2px solid var(--soft); padding-bottom:.15em}
+h3{font-size:1.13em; margin:1.4em 0 .2em}
+a{color:var(--accent); text-decoration:none} a:hover{text-decoration:underline}
+.small{color:#666; font-size:.92em}
+.lede{font-size:1.06em}
+.box{background:var(--soft); border-radius:8px; padding:12px 16px; margin:1em 0}
+.warn{background:var(--warnbg); border-radius:8px; padding:12px 16px; margin:1em 0}
+details{border:1px solid var(--line); border-radius:8px; margin:.6em 0 1.1em; background:#fbfcfe}
+details summary{cursor:pointer; padding:9px 14px; font-weight:bold; color:var(--accent); font-size:.95em}
+details .body{padding:2px 14px 12px}
+pre{background:#f4f4f8; border:1px solid #e2e2ee; border-radius:6px; padding:10px 12px; overflow-x:auto; font-size:.83em; line-height:1.5}
+code{font-family:'SF Mono',Consolas,Menlo,monospace; font-size:.92em}
+pre code{font-size:1em}
+.out{font-size:.92em; color:#333}
+table{border-collapse:collapse; margin:.8em 0; font-size:.93em; width:100%}
+th,td{border:1px solid var(--line); padding:6px 9px; text-align:left; vertical-align:top}
+th{background:var(--soft)}
+.toc{background:#fbfcfe; border:1px solid var(--line); border-radius:8px; padding:12px 18px}
+.toc ul{margin:.3em 0 .6em 1.1em; padding:0}
+.toc li{margin:.18em 0}
+.kicker{font-size:.8em; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:bold}
+.ctl{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:.6em 0}
+.ctl button{font-family:inherit; font-size:.92em; padding:5px 10px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer}
+.ctl button.on{background:var(--accent); color:#fff; border-color:var(--accent)}
+input[type=range]{accent-color:var(--accent)}
+.readout{background:var(--soft); border-radius:8px; padding:10px 14px; font-size:.97em; margin:.5em 0}
+.plot{margin:.6em 0}
+.plot svg{max-width:100%; height:auto; display:block; margin:0 auto}
+svg text{font-family:Helvetica,Arial,sans-serif}
+.matrix{display:grid; grid-template-columns:110px 1fr 1fr; gap:6px; margin:.8em 0; max-width:560px}
+.matrix .hd{background:none; border:none; font-weight:bold; text-align:center; padding:4px; font-size:.9em}
+.cell{border-radius:8px; padding:10px 12px; text-align:center; border:2px solid transparent}
+.cell .n{font-size:1.5em; font-weight:bold; display:block}
+.cell .lab{font-size:.85em; font-weight:bold; display:block}
+.cell .sub{font-size:.8em; color:#444; display:block}
+.cell.tp{background:#e2f2e4} .cell.tn{background:#e4ebf7}
+.cell.fp{background:#fdeed3} .cell.fn{background:#fbe3e3}
+.cell.hl{border-color:var(--ink)}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin:.6em 0}
+.chip{border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 12px; font-size:.9em; cursor:pointer; font-family:inherit}
+.chip.on{background:var(--accent); color:#fff; border-color:var(--accent)}
+</style></head><body>
+<p class="small"><a href="https://danieljordanviray.github.io/applied-data-science-lab/docs/">&larr; Homepage</a></p>
+<h1>The Practitioner's Guide to Regression</h1>
+<p class="small">October 18, 2026</p>
+<p class="lede">Regression is the first real model most of us learn — and the one that quietly shows up
+everywhere else. This is the working cheat sheet: fit an OLS model in Python and predict with it, bend
+variables until the relationship is straight (and bend the answer back to interpret it), judge fit with the
+right metric, read the three diagnostic plots, tell an outlier from a leverage point from an influential
+point — then graduate to logistic regression when the answer is yes/no, and grade it with a confusion matrix.</p>
+
+<h2>Contents</h2>
+<div class="toc">
+<p class="kicker">Part I — Linear regression</p>
+<ul>
+<li><a href="#fit">Fitting OLS in Python: numeric + categorical predictors, predictions</a></li>
+<li><a href="#transforms">Transformations: making it linear, and back-transforming to interpret</a></li>
+<li><a href="#metrics">Fit metrics: R&sup2;, RSE, RMSE, MAE, MAPE — one family</a></li>
+<li><a href="#diagnostics">Diagnostic plots: residuals vs fitted, Q-Q, scale-location</a></li>
+<li><a href="#influence">Outliers, leverage, and influence (+ Cook's distance)</a></li>
+</ul>
+<p class="kicker">Part II — Logistic regression</p>
+<ul>
+<li><a href="#why-logistic">Why logistic? The failure of the straight line</a></li>
+<li><a href="#languages">One prediction, five languages: y, probability, prediction, odds, log-odds</a></li>
+<li><a href="#confusion">The confusion matrix: where every metric comes from</a></li>
+</ul>
+</div>
+
+<h2>Part I — Linear regression</h2>
+
+<h3 id="fit">Fitting OLS in Python: the 60-second version</h3>
+<p>A linear regression says: <em>outcome = intercept + slope &times; predictor + &hellip;</em>, and
+<strong>ordinary least squares (OLS)</strong> picks the numbers that make the squared prediction errors as
+small as possible. The running example: predicting the <strong>cost of a hospital stay</strong> for 120
+patients from age and length of stay (numeric) and admission type (categorical).</p>
+<p>The fitted model, in words: every extra year of age adds about <strong>$51</strong> to the bill;
+every extra day adds about <strong>$954</strong>. Admission type enters as comparisons against the
+<strong>reference category</strong> (Elective, whose effect is folded into the intercept): an otherwise
+identical Emergency patient costs about <strong>$3,055 more</strong>, an Urgent patient about
+<strong>$1,242 more</strong>. Model R&sup2; = 0.72 — it explains about 0.72 of the variation in cost,
+as a proportion. And the point of the exercise — a prediction for a new patient, 68 years old, Emergency
+admission, 5-day stay: <strong>$15,247</strong>.</p>
+<details><summary>Data structure + Python code</summary><div class="body">
+<p>Data: one row per patient; the outcome in one column, predictors in the others. Categorical predictors
+go in as text — <code>C()</code> in the formula tells statsmodels to dummy-code them against a reference
+level. Predicting needs a small DataFrame with the same columns.</p>
+<pre><code>import pandas as pd
+from statsmodels.formula.api import ols
+
+# hosp: 120 rows; columns cost, age, los_days, admission (Elective/Emergency/Urgent)
+fit = ols("cost ~ age + los_days + C(admission)", data=hosp).fit()
+print(fit.summary())        # coefficients, R-squared = 0.72, p-values
+
+new_patient = pd.DataFrame({"age": [68], "los_days": [5], "admission": ["Emergency"]})
+fit.predict(new_patient)    # -> $15,247</code></pre>
+</div></details>
+
+<h3 id="transforms">Transformations: making it linear, and back-transforming to interpret</h3>
+<p>OLS fits straight lines in the variables you <em>give</em> it — nothing says you must hand it the raw
+variables. When a relationship bends, transform a variable until the bend straightens, fit the line there,
+then back-transform the answer to say it in original units. Example: drug dose vs symptom reduction, where
+each doubling of the dose buys roughly the same benefit (diminishing returns). Try it:</p>
+<svg id="trSvg" viewBox="0 0 640 310" role="img" aria-label="Dose response scatter with fitted line under different transformations"></svg>
+<div class="ctl">
+<button data-tr="raw" class="on">Dose as-is</button>
+<button data-tr="log">log(dose)</button>
+<button data-tr="sqrt">sqrt(dose)</button>
+<button data-tr="sq">dose&sup2;</button>
+</div>
+<div class="readout" id="trOut"></div>
+<p><strong>How you know which one you need:</strong> look at the scatter (and later, at the residual plot).
+A bend that <em>flattens out</em> is asking you to compress the big end of a variable — log does it
+strongly, square root gently. A bend that <em>accelerates upward</em> asks for the opposite — stretch it,
+with a square. And a fan-shaped residual plot (errors growing with the prediction) is the same story told
+about the outcome: compress y.</p>
+<table>
+<tr><th>Transformation</th><th>What it does</th><th>Reach for it when</th><th>Reading the result</th></tr>
+<tr><td><strong>log(y)</strong></td><td>Pulls in a long right tail; effects become multiplicative</td>
+<td>The classic move for right-skewed outcomes: costs, incomes, many lab values</td>
+<td>A one-unit rise in x changes y by about &beta;&times;100% (exactly: multiplies y by e<sup>&beta;</sup>)</td></tr>
+<tr><td><strong>sqrt(y)</strong></td><td>A gentler log(y)</td>
+<td>Mild skew; counts-like outcomes where spread grows with the level</td>
+<td>Square the predictions to get back to original units</td></tr>
+<tr><td><strong>1/y (inverse)</strong></td><td>The strongest tail-pull of the three</td>
+<td>Very strong skew; amounts that are really times or rates underneath</td>
+<td>Signs flip — safest to back-transform predictions (take the reciprocal) and read those</td></tr>
+<tr><td><strong>log(x)</strong></td><td>Compresses big x values</td>
+<td>Diminishing returns in x: dose, spending, days on a therapy</td>
+<td>A 1% rise in x moves y by about &beta;/100; a doubling of x moves y by about 0.69&times;&beta;</td></tr>
+<tr><td><strong>sqrt(x)</strong></td><td>Milder compression of x</td>
+<td>Gentler diminishing returns</td>
+<td>Slope is per unit of sqrt(x) — back-transform examples rather than quoting the slope</td></tr>
+<tr><td><strong>x&sup2;</strong> (fit x and x&sup2;)</td><td>Lets one predictor bend once: a U or an upside-down U</td>
+<td>Risk or response is best in the middle — BMI vs risk is the classic shape</td>
+<td>No single slope exists; plot the curve and quote values off it</td></tr>
+<tr><td><strong>x&sup3;</strong> (cubed)</td><td>Very sharp acceleration</td>
+<td>Rarely the real answer — listed for completeness; a bending-twice relationship usually wants a different tool</td>
+<td>As with x&sup2;: plot, don't quote</td></tr>
+</table>
+<div class="warn"><strong>Back-transformation, the part everyone forgets:</strong> a model fitted to log(cost)
+predicts log-dollars. Exponentiate the prediction to get dollars back. Two consequences: the coefficient
+reads as a <em>percentage</em> change rather than a dollar change, and the exponentiated prediction lands
+near the <em>typical</em> (median) patient rather than the mean — a feature for skewed costs, as long as
+you know it's happening.</div>
+
+<h3 id="metrics">Fit metrics: one family, five summaries</h3>
+<p>Every metric in this section is a summary of the same ingredients: the <strong>residuals</strong>
+(actual &minus; predicted, one per patient). Square them and add them up and you get the
+<strong>sum of squared errors</strong> — for the cost model, SSE &asymp; 295 million squared-dollars.
+Useless on its own, but everything else is a rescaling of it:</p>
+<table>
+<tr><th>Metric</th><th>Formula in words</th><th>Cost model</th><th>Use it when</th></tr>
+<tr><td><strong>RMSE</strong></td><td>Square root of (SSE / n)</td><td>$1,567</td>
+<td>The default "how wrong are we, typically?" — in the outcome's own units. Honest version: computed on
+<em>new</em> data; on the training data it's optimistic.</td></tr>
+<tr><td><strong>Residual standard error (RSE)</strong></td>
+<td>Square root of (SSE / (n &minus; predictors &minus; 1))</td><td>$1,601</td>
+<td>RMSE's training-room cousin. Dividing by a smaller number charges the model for each predictor it used,
+so adding junk predictors can't fake an improvement. This is the number R-style output reports.</td></tr>
+<tr><td><strong>MAE</strong></td><td>Average of |residual|</td><td>$1,226</td>
+<td>When a few huge errors shouldn't dominate the verdict. Diagnostic pairing: if RMSE is much bigger than
+MAE, a handful of very large misses are running the show.</td></tr>
+<tr><td><strong>MAPE</strong></td><td>Average of |residual / actual|, as a %</td><td>10%</td>
+<td>When the audience thinks in percentages, or you're comparing across outcomes with different scales.
+Breaks down when actuals sit near zero — a $50 error on a $60 bill is 83%.</td></tr>
+<tr><td><strong>R&sup2;</strong></td><td>1 &minus; SSE / (total variation in y)</td><td>0.72</td>
+<td>"How much of the variation did we explain?" — a proportion, good for communicating, silent about error
+size in real units. <strong>Adjusted R&sup2;</strong> (0.71 here) applies the same per-predictor charge
+as RSE; use it when comparing models with different numbers of predictors.</td></tr>
+</table>
+<p>So they're not competing metrics — they're siblings. Square the residuals and you get the RMSE/RSE line;
+take absolute values instead and you get MAE; divide by the actuals first and you get MAPE; compare SSE
+against the outcome's total variation and you get R&sup2;.</p>
+<details><summary>Python code: the whole family from one fit</summary><div class="body">
+<pre><code>import numpy as np
+
+resid = fit.resid                       # actual - predicted, one per patient
+n = len(resid)
+k = 4                                   # slopes: age, los_days, Emergency, Urgent
+sse = float((resid ** 2).sum())
+rmse = np.sqrt(sse / n)                 # $1,567
+rse  = np.sqrt(sse / (n - k - 1))       # $1,601
+mae  = np.abs(resid).mean()             # $1,226
+mape = (np.abs(resid) / hosp["cost"]).mean() * 100   # 10%
+print(fit.rsquared, fit.rsquared_adj)   # 0.72, 0.71</code></pre>
+</div></details>
+
+<h3 id="diagnostics">Diagnostic plots: what you're looking for, and why</h3>
+<p>Three standard plots, all computed from the cost model's residuals. This model is well-behaved, so
+these show what "fine" looks like — each caption names the trouble pattern it's built to catch.</p>
+<p><strong>Residuals vs fitted.</strong> The residuals should form a formless cloud around zero at every
+fitted level. A <em>curve</em> in the cloud means a relationship you didn't model — a bend asking for a
+transformation or an extra term. A <em>funnel</em> (spread widening left to right) means your errors grow
+with the size of the prediction.</p>
+<div class="plot"><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="376.2pt" height="229.5pt" viewBox="0 0 376.2 229.5" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ 
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 229.5 
+L 376.2 229.5 
+L 376.2 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 57.6 193.3 
+L 359.0 193.3 
+L 359.0 21.4 
+L 57.6 21.4 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <image xlink:href="data:image/png;base64,
+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" id="imagefe49239c1c" transform="scale(1 -1) translate(0 -162)" x="68.4" y="-26.4" width="280.8" height="162"/>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="mbedd2cab5d" d="M 0 0 
+L 0 3.5 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="64.3" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="64.3" y="207.1" transform="rotate(-0 64.3 207.1)">6000</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="100.6" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="100.6" y="207.1" transform="rotate(-0 100.6 207.1)">8000</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="136.9" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="136.9" y="207.1" transform="rotate(-0 136.9 207.1)">10000</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="173.2" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="173.2" y="207.1" transform="rotate(-0 173.2 207.1)">12000</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="209.5" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="209.5" y="207.1" transform="rotate(-0 209.5 207.1)">14000</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="245.8" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="245.8" y="207.1" transform="rotate(-0 245.8 207.1)">16000</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="282.1" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="282.1" y="207.1" transform="rotate(-0 282.1 207.1)">18000</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="318.4" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="318.4" y="207.1" transform="rotate(-0 318.4 207.1)">20000</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#mbedd2cab5d" x="354.7" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="354.7" y="207.1" transform="rotate(-0 354.7 207.1)">22000</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="208.3" y="220.1" transform="rotate(-0 208.3 220.1)">Fitted cost ($)</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_10">
+      <defs>
+       <path id="m906e80dea1" d="M 0 0 
+L -3.5 0 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m906e80dea1" x="57.6" y="174.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="50.6" y="177.8" transform="rotate(-0 50.6 177.8)">−3000</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m906e80dea1" x="57.6" y="153.7" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="50.6" y="157.1" transform="rotate(-0 50.6 157.1)">−2000</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m906e80dea1" x="57.6" y="133.0" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="50.6" y="136.4" transform="rotate(-0 50.6 136.4)">−1000</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m906e80dea1" x="57.6" y="112.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="50.6" y="115.8" transform="rotate(-0 50.6 115.8)">0</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m906e80dea1" x="57.6" y="91.6" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="50.6" y="95.1" transform="rotate(-0 50.6 95.1)">1000</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m906e80dea1" x="57.6" y="71.0" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="50.6" y="74.4" transform="rotate(-0 50.6 74.4)">2000</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m906e80dea1" x="57.6" y="50.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="50.6" y="53.7" transform="rotate(-0 50.6 53.7)">3000</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m906e80dea1" x="57.6" y="29.6" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="50.6" y="33.0" transform="rotate(-0 50.6 33.0)">4000</text>
+     </g>
+    </g>
+    <g id="text_19">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="14.0" y="107.3" transform="rotate(-90 14.0 107.3)">Residual ($)</text>
+    </g>
+   </g>
+   <g id="line2d_18">
+    <path d="M 57.6 112.3 
+L 359.0 112.3 
+" clip-path="url(#pc04d60b3cc)" style="fill: none; stroke: #c0392b; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 57.6 193.3 
+L 57.6 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 359.0 193.3 
+L 359.0 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 57.6 193.3 
+L 359.0 193.3 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 57.6 21.4 
+L 359.0 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 10.8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="208.3" y="15.4" transform="rotate(-0 208.3 15.4)">Residuals vs fitted</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pc04d60b3cc">
+   <rect x="57.6" y="21.4" width="301.32" height="171.9"/>
+  </clipPath>
+ </defs>
+</svg>
+</div>
+<p><strong>Normal Q-Q plot.</strong> Standardized residuals plotted against where they'd sit if they were
+perfectly normal. On the diagonal line = normal enough. This matters for confidence and prediction
+intervals and for small samples; big samples and point predictions forgive a lot. Tails that peel away at
+both ends mean heavier tails than normal — usually a few extreme patients.</p>
+<div class="plot"><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="349.0pt" height="229.5pt" viewBox="0 0 349.0 229.5" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ 
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 229.5 
+L 349.0 229.5 
+L 349.0 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 40.5 193.3 
+L 341.8 193.3 
+L 341.8 21.4 
+L 40.5 21.4 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m3be8866d4b" d="M 0 0 
+L 0 3.5 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m3be8866d4b" x="69.0" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="69.0" y="207.1" transform="rotate(-0 69.0 207.1)">−2</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m3be8866d4b" x="126.1" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="126.1" y="207.1" transform="rotate(-0 126.1 207.1)">−1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m3be8866d4b" x="183.1" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="183.1" y="207.1" transform="rotate(-0 183.1 207.1)">0</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m3be8866d4b" x="240.2" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="240.2" y="207.1" transform="rotate(-0 240.2 207.1)">1</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m3be8866d4b" x="297.2" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="297.2" y="207.1" transform="rotate(-0 297.2 207.1)">2</text>
+     </g>
+    </g>
+    <g id="text_6">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="191.1" y="220.1" transform="rotate(-0 191.1 220.1)">Theoretical Quantiles</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_6">
+      <defs>
+       <path id="m0b981e5aba" d="M 0 0 
+L -3.5 0 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m0b981e5aba" x="40.5" y="177.0" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="33.5" y="180.4" transform="rotate(-0 33.5 180.4)">−2</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m0b981e5aba" x="40.5" y="144.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="33.5" y="147.9" transform="rotate(-0 33.5 147.9)">−1</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m0b981e5aba" x="40.5" y="111.9" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="33.5" y="115.3" transform="rotate(-0 33.5 115.3)">0</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m0b981e5aba" x="40.5" y="79.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="33.5" y="82.8" transform="rotate(-0 33.5 82.8)">1</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m0b981e5aba" x="40.5" y="46.8" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="33.5" y="50.3" transform="rotate(-0 33.5 50.3)">2</text>
+     </g>
+    </g>
+    <g id="text_12">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="14.0" y="107.3" transform="rotate(-90 14.0 107.3)">Sample Quantiles</text>
+    </g>
+   </g>
+   <image xlink:href="data:image/png;base64,
+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" id="image6d5753b549" transform="scale(1 -1) translate(0 -162)" x="44.4" y="-26.4" width="279.6" height="162"/>
+   <g id="line2d_11">
+    <path d="M 40.5 193.3 
+L 341.8 21.4 
+" clip-path="url(#pf1755bec7d)" style="fill: none; stroke: #ff0000; stroke-width: 1.5; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 40.5 193.3 
+L 40.5 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 341.8 193.3 
+L 341.8 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 40.5 193.3 
+L 341.8 193.3 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 40.5 21.4 
+L 341.8 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 10.8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="191.1" y="15.4" transform="rotate(-0 191.1 15.4)">Normal Q-Q (standardized residuals)</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pf1755bec7d">
+   <rect x="40.5" y="21.4" width="301.32" height="171.9"/>
+  </clipPath>
+ </defs>
+</svg>
+</div>
+<p><strong>Scale-location plot.</strong> The square root of the absolute standardized residuals against
+fitted values — the funnel detector with the direction stripped out, so spread is all you see. A flat band
+means constant error variance (homoscedasticity). A rising trend is the funnel again: bigger predictions,
+bigger misses — often the cue for log(y).</p>
+<div class="plot"><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="360.1pt" height="229.5pt" viewBox="0 0 360.1 229.5" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ 
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 229.5 
+L 360.1 229.5 
+L 360.1 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 41.6 193.3 
+L 342.9 193.3 
+L 342.9 21.4 
+L 41.6 21.4 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <image xlink:href="data:image/png;base64,
+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" id="imagee18c7428d5" transform="scale(1 -1) translate(0 -162)" x="52.8" y="-26.4" width="279.6" height="162"/>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m7b350d2d21" d="M 0 0 
+L 0 3.5 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m7b350d2d21" x="48.2" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="48.2" y="207.1" transform="rotate(-0 48.2 207.1)">6000</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m7b350d2d21" x="84.5" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="84.5" y="207.1" transform="rotate(-0 84.5 207.1)">8000</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m7b350d2d21" x="120.8" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="120.8" y="207.1" transform="rotate(-0 120.8 207.1)">10000</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m7b350d2d21" x="157.1" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="157.1" y="207.1" transform="rotate(-0 157.1 207.1)">12000</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m7b350d2d21" x="193.4" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="193.4" y="207.1" transform="rotate(-0 193.4 207.1)">14000</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m7b350d2d21" x="229.7" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="229.7" y="207.1" transform="rotate(-0 229.7 207.1)">16000</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m7b350d2d21" x="266.0" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="266.0" y="207.1" transform="rotate(-0 266.0 207.1)">18000</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m7b350d2d21" x="302.3" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="302.3" y="207.1" transform="rotate(-0 302.3 207.1)">20000</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m7b350d2d21" x="338.6" y="193.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="338.6" y="207.1" transform="rotate(-0 338.6 207.1)">22000</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="192.2" y="220.1" transform="rotate(-0 192.2 220.1)">Fitted cost ($)</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_10">
+      <defs>
+       <path id="md08ea37d16" d="M 0 0 
+L -3.5 0 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#md08ea37d16" x="41.6" y="173.7" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="34.6" y="177.1" transform="rotate(-0 34.6 177.1)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#md08ea37d16" x="41.6" y="153.0" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="34.6" y="156.4" transform="rotate(-0 34.6 156.4)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#md08ea37d16" x="41.6" y="132.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="34.6" y="135.7" transform="rotate(-0 34.6 135.7)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#md08ea37d16" x="41.6" y="111.5" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="34.6" y="114.9" transform="rotate(-0 34.6 114.9)">0.8</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#md08ea37d16" x="41.6" y="90.8" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="34.6" y="94.2" transform="rotate(-0 34.6 94.2)">1.0</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#md08ea37d16" x="41.6" y="70.1" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="34.6" y="73.5" transform="rotate(-0 34.6 73.5)">1.2</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#md08ea37d16" x="41.6" y="49.3" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="34.6" y="52.8" transform="rotate(-0 34.6 52.8)">1.4</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#md08ea37d16" x="41.6" y="28.6" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="34.6" y="32.0" transform="rotate(-0 34.6 32.0)">1.6</text>
+     </g>
+    </g>
+    <g id="text_19">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="14.1" y="107.3" transform="rotate(-90 14.1 107.3)">sqrt(|standardized residual|)</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 41.6 193.3 
+L 41.6 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 342.9 193.3 
+L 342.9 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 41.6 193.3 
+L 342.9 193.3 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 41.6 21.4 
+L 342.9 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 10.8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="192.2" y="15.4" transform="rotate(-0 192.2 15.4)">Scale-location</text>
+   </g>
+  </g>
+ </g>
+</svg>
+</div>
+
+<h3 id="influence">Outliers, leverage, and influence: three different accusations</h3>
+<p>These three words get used interchangeably and mean different things. A small clinic dataset
+(age &rarr; cost of stay, 30 patients) with one of each planted in it:</p>
+<div class="plot"><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="375.5pt" height="255.4pt" viewBox="0 0 375.5 255.4" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ 
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 255.4 
+L 375.5 255.4 
+L 375.5 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 55.8 219.2 
+L 368.3 219.2 
+L 368.3 30.7 
+L 55.8 30.7 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <image xlink:href="data:image/png;base64,
+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" id="image93659213cc" transform="scale(1 -1) translate(0 -188.4)" x="91.2" y="-30" width="272.4" height="188.4"/>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m3949787c95" d="M 0 0 
+L 0 3.5 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m3949787c95" x="70.0" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="70.0" y="233.0" transform="rotate(-0 70.0 233.0)">20</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m3949787c95" x="105.5" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="105.5" y="233.0" transform="rotate(-0 105.5 233.0)">30</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m3949787c95" x="141.1" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="141.1" y="233.0" transform="rotate(-0 141.1 233.0)">40</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m3949787c95" x="176.6" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="176.6" y="233.0" transform="rotate(-0 176.6 233.0)">50</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m3949787c95" x="212.1" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="212.1" y="233.0" transform="rotate(-0 212.1 233.0)">60</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m3949787c95" x="247.6" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="247.6" y="233.0" transform="rotate(-0 247.6 233.0)">70</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m3949787c95" x="283.1" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="283.1" y="233.0" transform="rotate(-0 283.1 233.0)">80</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m3949787c95" x="318.6" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="318.6" y="233.0" transform="rotate(-0 318.6 233.0)">90</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m3949787c95" x="354.1" y="219.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="354.1" y="233.0" transform="rotate(-0 354.1 233.0)">100</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="212.1" y="246.0" transform="rotate(-0 212.1 246.0)">Age</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_10">
+      <defs>
+       <path id="mfebb4ff32a" d="M 0 0 
+L -3.5 0 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mfebb4ff32a" x="55.8" y="186.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="48.8" y="189.8" transform="rotate(-0 48.8 189.8)">4000</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#mfebb4ff32a" x="55.8" y="151.8" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="48.8" y="155.2" transform="rotate(-0 48.8 155.2)">6000</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#mfebb4ff32a" x="55.8" y="117.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="48.8" y="120.6" transform="rotate(-0 48.8 120.6)">8000</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#mfebb4ff32a" x="55.8" y="82.5" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="48.8" y="86.0" transform="rotate(-0 48.8 86.0)">10000</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#mfebb4ff32a" x="55.8" y="47.9" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="48.8" y="51.3" transform="rotate(-0 48.8 51.3)">12000</text>
+     </g>
+    </g>
+    <g id="text_16">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="14.0" y="124.9" transform="rotate(-90 14.0 124.9)">Cost ($)</text>
+    </g>
+   </g>
+   <g id="line2d_15">
+    <path d="M 70.0 167.9 
+L 354.1 121.0 
+" clip-path="url(#p8067574bd1)" style="fill: none; stroke: #c0392b; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 55.8 219.2 
+L 55.8 30.7 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 368.3 219.2 
+L 368.3 30.7 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 55.8 219.2 
+L 368.3 219.2 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 55.8 30.7 
+L 368.3 30.7 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 170.6 29.6 
+Q 176.3 33.8 182.1 38.1 
+" style="fill: none; stroke: #666666; stroke-width: 0.7; stroke-linecap: round"/>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; fill: #333333" transform="translate(126.9 14.1)">outlier</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; fill: #333333" transform="translate(126.9 23.7)">(big residual)</text>
+   </g>
+   <g id="patch_8">
+    <path d="M 277.6 91.3 
+Q 307.8 97.5 337.9 103.6 
+" style="fill: none; stroke: #666666; stroke-width: 0.7; stroke-linecap: round"/>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; fill: #333333" transform="translate(219.2 82.3)">leverage only</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; fill: #333333" transform="translate(219.2 91.9)">(on trend)</text>
+   </g>
+   <g id="patch_9">
+    <path d="M 234.9 222.5 
+Q 282.9 216.7 330.8 210.9 
+" style="fill: none; stroke: #666666; stroke-width: 0.7; stroke-linecap: round"/>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; fill: #333333" transform="translate(148.2 225.3)">influential</text>
+    <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; fill: #333333" transform="translate(148.2 234.9)">(leverage x residual)</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 10.8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="212.1" y="24.7" transform="rotate(-0 212.1 24.7)">Bubble size = Cook's distance</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p8067574bd1">
+   <rect x="55.8" y="30.7" width="312.48" height="188.5"/>
+  </clipPath>
+ </defs>
+</svg>
+</div>
+<p><strong>Outlier</strong> — a point that doesn't fit the pattern: a big residual. The 52-year-old whose
+stay cost $12,500 against a predicted ~$6,100 (standardized residual 5.9). Being an outlier is about
+<em>y</em> disagreeing with the model.</p>
+<p><strong>Leverage</strong> — a point whose <em>x</em> is unusual: far from the crowd horizontally, so
+the line has to pass near it, like the long end of a lever. The 96-year-old has the most leverage here
+(hat value 0.21, vs a typical ~0.07). But he sits right <em>on</em> the trend, so he barely moves
+anything — leverage is only <em>potential</em> influence.</p>
+<p><strong>Influence</strong> — leverage &times; disagreement: a point that actually bends the fit. The
+94-year-old with a $2,600 stay has extreme age <em>and</em> sits far off the line; delete him and the slope
+visibly changes. <strong>Cook's distance</strong> measures exactly this — one number per point: how much
+the whole fit would move if that point were removed. Rules of thumb: look closer above 4/n (here
+0.13); above 1 (his is 1.33), definitely investigate. Investigating means: check for a
+data error first, then report the fit with and without the point. It does not mean silently deleting
+inconvenient patients.</p>
+<details><summary>Python code: hat values and Cook's distance</summary><div class="body">
+<pre><code>from statsmodels.formula.api import ols
+
+fit2 = ols("cost ~ age", data=clinic).fit()
+influence = fit2.get_influence()
+hats = influence.hat_matrix_diag        # leverage, one per patient
+cooks = influence.cooks_distance[0]     # Cook's distance, one per patient
+# flag for a closer look: cooks > 4 / len(clinic)</code></pre>
+<p class="out">Planted results: the influential patient's Cook's distance is 1.33 — the largest in
+the dataset. The on-trend 96-year-old's is 0.08 despite his leverage.</p>
+</div></details>
+
+<h2>Part II — Logistic regression</h2>
+<div class="box"><strong>Read this first:</strong> logistic regression is linear regression's sibling, not a
+different species. If the machinery above — fit a line, read coefficients, grade the fit — is new to you,
+work through <a href="#fit">Part I</a> first; everything here builds on it.</div>
+
+<h3 id="why-logistic">Why logistic? The failure of the straight line</h3>
+<p>New problem: predict whether a patient is <strong>readmitted within 30 days</strong> (yes/no) from a
+risk score, for 240 patients (42% were actually readmitted). Fit a straight line to a 0/1 outcome
+anyway and two things break. The line escapes: it predicts probabilities of 1.2 and &minus;0.1, which don't
+exist. And it insists the effect of 10 extra risk points is identical everywhere — but probability is
+squeezed into [0, 1], so real risk has to bend: slow at the bottom, fast in the middle, slow at the top.</p>
+<div class="plot"><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="368.7pt" height="240.6pt" viewBox="0 0 368.7 240.6" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ 
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 240.6 
+L 368.7 240.6 
+L 368.7 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 49.1 204.4 
+L 361.5 204.4 
+L 361.5 21.4 
+L 49.1 21.4 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <image xlink:href="data:image/png;base64,
+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" id="image5400a39b2a" transform="scale(1 -1) translate(0 -128.4)" x="75.6" y="-48" width="261.6" height="128.4"/>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m689bc05e35" d="M 0 0 
+L 0 3.5 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m689bc05e35" x="63.3" y="204.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="63.3" y="218.2" transform="rotate(-0 63.3 218.2)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m689bc05e35" x="120.1" y="204.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="120.1" y="218.2" transform="rotate(-0 120.1 218.2)">20</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m689bc05e35" x="176.9" y="204.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="176.9" y="218.2" transform="rotate(-0 176.9 218.2)">40</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m689bc05e35" x="233.7" y="204.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="233.7" y="218.2" transform="rotate(-0 233.7 218.2)">60</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m689bc05e35" x="290.5" y="204.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="290.5" y="218.2" transform="rotate(-0 290.5 218.2)">80</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m689bc05e35" x="347.3" y="204.4" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #555555" x="347.3" y="218.2" transform="rotate(-0 347.3 218.2)">100</text>
+     </g>
+    </g>
+    <g id="text_7">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="205.3" y="231.2" transform="rotate(-0 205.3 231.2)">Risk score</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <defs>
+       <path id="m2f7cf5584f" d="M 0 0 
+L -3.5 0 
+" style="stroke: #555555; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m2f7cf5584f" x="49.1" y="188.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="42.1" y="191.6" transform="rotate(-0 42.1 191.6)">−0.2</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m2f7cf5584f" x="49.1" y="166.7" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="42.1" y="170.1" transform="rotate(-0 42.1 170.1)">0.0</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m2f7cf5584f" x="49.1" y="145.2" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="42.1" y="148.6" transform="rotate(-0 42.1 148.6)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m2f7cf5584f" x="49.1" y="123.6" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="42.1" y="127.1" transform="rotate(-0 42.1 127.1)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m2f7cf5584f" x="49.1" y="102.1" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="42.1" y="105.5" transform="rotate(-0 42.1 105.5)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m2f7cf5584f" x="49.1" y="80.6" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="42.1" y="84.0" transform="rotate(-0 42.1 84.0)">0.8</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m2f7cf5584f" x="49.1" y="59.1" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="42.1" y="62.5" transform="rotate(-0 42.1 62.5)">1.0</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m2f7cf5584f" x="49.1" y="37.5" style="fill: #555555; stroke: #555555; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: end; fill: #555555" x="42.1" y="41.0" transform="rotate(-0 42.1 41.0)">1.2</text>
+     </g>
+    </g>
+    <g id="text_16">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle; fill: #222222" x="14.0" y="112.9" transform="rotate(-90 14.0 112.9)">Readmitted (0/1)</text>
+    </g>
+   </g>
+   <g id="line2d_15">
+    <path d="M 63.3 170.1 
+L 69.1 168.0 
+L 74.9 166.0 
+L 80.7 163.9 
+L 86.4 161.8 
+L 92.2 159.7 
+L 98.0 157.7 
+L 103.8 155.6 
+L 109.6 153.5 
+L 115.4 151.4 
+L 121.2 149.4 
+L 127.0 147.3 
+L 132.8 145.2 
+L 138.6 143.1 
+L 144.4 141.0 
+L 150.2 139.0 
+L 156.0 136.9 
+L 161.8 134.8 
+L 167.6 132.7 
+L 173.4 130.7 
+L 179.2 128.6 
+L 185.0 126.5 
+L 190.8 124.4 
+L 196.6 122.4 
+L 202.4 120.3 
+L 208.2 118.2 
+L 214.0 116.1 
+L 219.8 114.1 
+L 225.6 112.0 
+L 231.4 109.9 
+L 237.2 107.8 
+L 243.0 105.7 
+L 248.8 103.7 
+L 254.6 101.6 
+L 260.4 99.5 
+L 266.2 97.4 
+L 272.0 95.4 
+L 277.8 93.3 
+L 283.6 91.2 
+L 289.4 89.1 
+L 295.2 87.1 
+L 301.0 85.0 
+L 306.7 82.9 
+L 312.5 80.8 
+L 318.3 78.8 
+L 324.1 76.7 
+L 329.9 74.6 
+L 335.7 72.5 
+L 341.5 70.4 
+L 347.3 68.4 
+" clip-path="url(#p01e7601fe4)" style="fill: none; stroke: #c0392b; stroke-width: 1.4; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_16">
+    <path d="M 63.3 159.4 
+L 69.1 158.7 
+L 74.9 158.0 
+L 80.7 157.2 
+L 86.4 156.4 
+L 92.2 155.5 
+L 98.0 154.5 
+L 103.8 153.5 
+L 109.6 152.3 
+L 115.4 151.1 
+L 121.2 149.8 
+L 127.0 148.4 
+L 132.8 147.0 
+L 138.6 145.4 
+L 144.4 143.8 
+L 150.2 142.0 
+L 156.0 140.2 
+L 161.8 138.3 
+L 167.6 136.2 
+L 173.4 134.1 
+L 179.2 132.0 
+L 185.0 129.7 
+L 190.8 127.4 
+L 196.6 125.0 
+L 202.4 122.6 
+L 208.2 120.1 
+L 214.0 117.6 
+L 219.8 115.1 
+L 225.6 112.6 
+L 231.4 110.1 
+L 237.2 107.6 
+L 243.0 105.1 
+L 248.8 102.6 
+L 254.6 100.2 
+L 260.4 97.8 
+L 266.2 95.5 
+L 272.0 93.3 
+L 277.8 91.1 
+L 283.6 89.1 
+L 289.4 87.1 
+L 295.2 85.2 
+L 301.0 83.4 
+L 306.7 81.6 
+L 312.5 80.0 
+L 318.3 78.5 
+L 324.1 77.0 
+L 329.9 75.7 
+L 335.7 74.4 
+L 341.5 73.2 
+L 347.3 72.1 
+" clip-path="url(#p01e7601fe4)" style="fill: none; stroke: #277da1; stroke-width: 2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_17">
+    <path d="M 49.1 166.7 
+L 361.5 166.7 
+" clip-path="url(#p01e7601fe4)" style="fill: none; stroke: #bbbbbb; stroke-width: 0.8; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_18">
+    <path d="M 49.1 59.1 
+L 361.5 59.1 
+" clip-path="url(#p01e7601fe4)" style="fill: none; stroke: #bbbbbb; stroke-width: 0.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 49.1 204.4 
+L 49.1 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 361.5 204.4 
+L 361.5 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 49.1 204.4 
+L 361.5 204.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 49.1 21.4 
+L 361.5 21.4 
+" style="fill: none; stroke: #888888; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 10.8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: middle" x="205.3" y="15.4" transform="rotate(-0 205.3 15.4)">Same data, two fits</text>
+   </g>
+   <g id="legend_1">
+    <g id="line2d_19">
+     <path d="M 56.3 180.4 
+L 64.3 180.4 
+L 72.3 180.4 
+" style="fill: none; stroke: #c0392b; stroke-width: 1.4; stroke-linecap: square"/>
+    </g>
+    <g id="text_18">
+     <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="78.7" y="183.2" transform="rotate(-0 78.7 183.2)">linear fit (escapes 0-1)</text>
+    </g>
+    <g id="line2d_20">
+     <path d="M 56.3 192.4 
+L 64.3 192.4 
+L 72.3 192.4 
+" style="fill: none; stroke: #277da1; stroke-width: 2; stroke-linecap: square"/>
+    </g>
+    <g id="text_19">
+     <text style="font-size: 8px; font-family: 'DejaVu Sans', 'Bitstream Vera Sans', 'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', 'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', sans-serif; text-anchor: start" x="78.7" y="195.2" transform="rotate(-0 78.7 195.2)">logistic fit</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p01e7601fe4">
+   <rect x="49.1" y="21.4" width="312.48" height="183.0"/>
+  </clipPath>
+ </defs>
+</svg>
+</div>
+<p>The logistic fix is one move: <strong>don't put the line on the probability — put it on the
+log-odds</strong>, then squash the result back through the S-curve so every prediction lands inside [0, 1].
+The fitted line here is log-odds = -2.62 + 0.046 &times; risk score. What log-odds, odds, and probability
+each mean — and why you'd ever want all three — is the next section.</p>
+<details><summary>Data structure + Python code</summary><div class="body">
+<p>Data: one row per patient; the outcome is 0/1, the predictor is a number. Same formula shape as OLS —
+<code>logit</code> instead of <code>ols</code>.</p>
+<pre><code>from statsmodels.formula.api import logit
+
+# rd: 240 rows; columns score (0-100), readmit (0/1)
+lfit = logit("readmit ~ score", data=rd).fit()
+print(lfit.summary())       # log-odds = -2.62 + 0.046 * score</code></pre>
+</div></details>
+
+<h3 id="languages">One prediction, five languages</h3>
+<p>Five patients from the readmission model. Every row is the same prediction said five ways — plus what
+actually happened:</p>
+<table>
+<tr><th>Risk score (x)</th><th>Actual outcome (y)</th><th>Probability</th><th>Predicted response</th><th>Odds</th><th>Log-odds</th></tr>
+<tr><td>20</td><td>0</td><td>0.15</td><td>0</td><td>0.18</td><td>-1.70</td></tr>
+<tr><td>40</td><td>1</td><td>0.31</td><td>0</td><td>0.46</td><td>-0.78</td></tr>
+<tr><td>55</td><td>0</td><td>0.48</td><td>0</td><td>0.92</td><td>-0.09</td></tr>
+<tr><td>70</td><td>1</td><td>0.65</td><td>1</td><td>1.83</td><td>0.60</td></tr>
+<tr><td>85</td><td>1</td><td>0.78</td><td>1</td><td>3.65</td><td>1.29</td></tr>
+</table>
+<p><strong>Why each column earns its place:</strong></p>
+<p><strong>x — the input.</strong> What you know about the patient before deciding anything.</p>
+<p><strong>y — what actually happened.</strong> The truth you grade against. Note the patient with
+probability 0.35 who <em>was</em> readmitted: a probability is not a promise, and a "wrong" prediction at
+0.35 isn't necessarily a model failure.</p>
+<p><strong>Probability — the human language.</strong> "About a 1-in-3 chance of coming back." This is the
+only column you'd say out loud to a clinician, an executive, or a patient.</p>
+<p><strong>Predicted response — probability forced into an action.</strong> A threshold (here the default
+0.5) turns "how likely" into "flag or don't flag." The threshold is not part of the model — it's a decision
+about which mistake is cheaper, and the next section is about choosing it.</p>
+<p><strong>Odds = probability / (1 &minus; probability) — the betting language.</strong> Effects
+<em>multiply</em> on this scale, which is why papers report <strong>odds ratios</strong>: in this model,
+every +10 risk points multiplies the odds of readmission by <strong>1.6&times;</strong>, wherever you
+start from. (Careful: an odds ratio is not a probability ratio — at high base rates they drift apart.)</p>
+<p><strong>Log-odds — the model's native language.</strong> This is the straight line actually being
+fitted (-2.62 + 0.046 &times; score): add a predictor, add a term; effects are additive here. Nobody
+quotes log-odds to a human — but every other column is a conversion of it, so it's the one to compute in.</p>
+<details><summary>Python code: getting all five from the fit</summary><div class="body">
+<pre><code>import numpy as np
+
+patients = pd.DataFrame({"score": [20, 40, 55, 70, 85]})   # the five patients in the table
+prob = lfit.predict(patients)                    # probabilities, straight from the fit
+log_odds = np.log(prob / (1 - prob))             # invert the squash: back to the line
+odds = prob / (1 - prob)
+pred = (prob >= 0.5).astype(int)                 # the 0.5 threshold, made explicit</code></pre>
+<p class="out">predict() hands back probabilities. The log-odds is one algebra step away —
+log(p / (1 &minus; p)) — because that formula and the S-curve are exact inverses.</p>
+</div></details>
+
+<h3 id="confusion">The confusion matrix: where every metric comes from</h3>
+<p>Force the readmission model's probabilities into yes/no calls and grade them against what actually
+happened. Four boxes result. Every classification metric you've ever seen is just arithmetic on these
+four numbers — drag the threshold and watch them move:</p>
+<div class="ctl">
+<label>Flag patients whose predicted probability is at least:
+<input type="range" id="thrSlider" min="0.05" max="0.95" step="0.05" value="0.5">
+<strong id="thrVal">0.50</strong></label>
+</div>
+<div class="matrix">
+<div class="hd"></div><div class="hd">Actually readmitted</div><div class="hd">Actually stayed home</div>
+<div class="hd">Flagged</div>
+<div class="cell tp" id="cTP"><span class="lab">True positives</span><span class="n">–</span><span class="sub">flagged, and truly readmitted</span></div>
+<div class="cell fp" id="cFP"><span class="lab">False positives</span><span class="n">–</span><span class="sub">flagged, but stayed home</span></div>
+<div class="hd">Not flagged</div>
+<div class="cell fn" id="cFN"><span class="lab">False negatives</span><span class="n">–</span><span class="sub">missed: readmitted, never flagged</span></div>
+<div class="cell tn" id="cTN"><span class="lab">True negatives</span><span class="n">–</span><span class="sub">not flagged, and stayed home</span></div>
+</div>
+<div class="chips" id="metricChips"></div>
+<div class="readout" id="cmOut"></div>
+<p><strong>The five standard metrics, in words</strong> (tap one above to see which boxes it uses):</p>
+<p><strong>Accuracy</strong> = (TP + TN) / everyone — "overall, how often are we right?" At the 0.50
+threshold: 74%. Handle with care: with a rare outcome, a model that flags <em>nobody</em> also scores
+high accuracy while being useless.</p>
+<p><strong>Sensitivity (recall)</strong> = TP / (TP + FN) — of the patients who truly were readmitted,
+how many did we flag? At 0.50: 66%. This is the "don't miss cases" metric.</p>
+<p><strong>Specificity</strong> = TN / (TN + FP) — of the patients who truly stayed home, how many did we
+leave alone? At 0.50: 79%.</p>
+<p><strong>Precision</strong> = TP / (TP + FP) — of the patients we flagged, how many truly were
+readmitted? At 0.50: 70%. This is the "don't cry wolf" metric — it prices your follow-up team's time.</p>
+<p><strong>F1</strong> = the harmonic mean of precision and sensitivity — one number for when both kinds
+of mistake matter and you refuse to pick a favorite. At 0.50: 68%.</p>
+<div class="warn"><strong>The threshold is a policy decision, not a statistic.</strong> Drag it down and
+you catch more readmissions (sensitivity climbs) but flag more healthy patients (precision falls, follow-up
+costs climb). Drag it up and the reverse. There is no mathematically best threshold — only the one that
+matches what a missed readmission costs you versus what a false alarm costs you.</div>
+<details><summary>Python code: the matrix at threshold 0.50</summary><div class="body">
+<pre><code>probs = lfit.predict(rd)                               # one probability per patient
+pred = (probs >= 0.5).astype(int)                      # threshold, made explicit
+tp = int(((pred == 1) & (rd["readmit"] == 1)).sum())   # 67
+fp = int(((pred == 1) & (rd["readmit"] == 0)).sum())   # 29
+tn = int(((pred == 0) & (rd["readmit"] == 0)).sum())   # 110
+fn = int(((pred == 0) & (rd["readmit"] == 1)).sum())   # 34</code></pre>
+<p class="out">Same four numbers the interactive shows at 0.50 — computed here in Python, there in your
+browser, from the same probabilities.</p>
+</div></details>
+
+<div class="box"><strong>Prove it:</strong> every coefficient, metric, plot, and table entry on this page
+was computed by the build script from the toy datasets described, with the decisions asserted in code
+before the page was written — including the planted outlier, leverage point, and influential point in the
+clinic data, whose Cook's distances had to rank exactly as the text claims.</div>
+
+<p class="small">Part of the <a href="https://danieljordanviray.github.io/applied-data-science-lab/docs/">Applied
+Data Science Lab</a>. Companion:
+<a href="https://danieljordanviray.github.io/applied-data-science-lab/stats-and-prob/practitioners-guide/practitioners-guide.html">The
+Practitioner's Guide to Statistical Tests</a> — the hypothesis-testing method bank.</p>
+
+<script>
+/* ---------- transformation explorer ---------- */
+var DOSE = [[101.2, 64.2], [13.6, 36.7], [10.7, 37.0], [38.2, 47.4], [17.0, 39.5], [39.9, 44.7], [2.8, 17.0], [20.0, 37.6], [19.7, 34.5], [90.9, 62.9], [2.4, 16.7], [12.8, 29.6], [26.5, 41.5], [19.1, 38.3], [2.7, 9.4], [22.7, 45.2], [5.0, 19.3], [4.5, 18.2], [73.0, 62.4], [4.5, 18.0], [12.8, 37.4], [43.2, 48.8], [36.2, 45.4], [19.3, 34.1], [54.5, 63.4], [13.5, 35.2], [25.4, 46.3], [57.2, 56.5], [32.1, 49.2], [27.7, 46.7], [10.5, 40.6], [19.7, 37.6], [10.1, 26.1], [42.1, 48.3], [9.5, 26.2], [13.5, 39.4]];
+var TRF = {
+  raw:  {f:function(x){return x;}, label:'dose (mg)', verdict:'The bend is the story: benefit flattens as dose grows, so a straight line splits the difference and misses both ends.'},
+  log:  {f:function(x){return Math.log(x);}, label:'log(dose)', verdict:'Straight. Each doubling of the dose buys about the same benefit wherever you start — the fingerprint of a log-dose relationship. This is the transform this data was asking for.'},
+  sqrt: {f:function(x){return Math.sqrt(x);}, label:'sqrt(dose)', verdict:'Better, but still bending — a gentler squeeze than the data wants. When sqrt almost works and log fully works, the truth is usually log.'},
+  sq:   {f:function(x){return x*x;}, label:'dose squared', verdict:'Worse — squaring stretches the big end in exactly the direction the relationship was already flattening away from. Wrong-way transform, useful as a warning.'}
+};
+var trMode = 'raw';
+function olsFit(pts){
+  var n=pts.length, mx=0, my=0, i;
+  for(i=0;i<n;i++){mx+=pts[i][0]; my+=pts[i][1];} mx/=n; my/=n;
+  var sxy=0, sxx=0, sst=0, sse=0;
+  for(i=0;i<n;i++){sxy+=(pts[i][0]-mx)*(pts[i][1]-my); sxx+=(pts[i][0]-mx)*(pts[i][0]-mx);}
+  var b=sxy/sxx, a=my-b*mx;
+  for(i=0;i<n;i++){var yh=a+b*pts[i][0]; sse+=(pts[i][1]-yh)*(pts[i][1]-yh); sst+=(pts[i][1]-my)*(pts[i][1]-my);}
+  return {a:a, b:b, r2:1-sse/sst};
+}
+function drawTr(){
+  var svg=document.getElementById('trSvg'), W=640, H=310, padL=46, padR=14, padT=14, padB=36;
+  var T=TRF[trMode];
+  var pts=DOSE.map(function(d){return [T.f(d[0]), d[1]];});
+  var xs=pts.map(function(p){return p[0];}), ys=pts.map(function(p){return p[1];});
+  var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs), y0=0, y1=Math.max.apply(null,ys)*1.12;
+  var X=function(v){return padL+(v-x0)/(x1-x0)*(W-padL-padR);};
+  var Y=function(v){return H-padB-(v-y0)/(y1-y0)*(H-padT-padB);};
+  var fit=olsFit(pts), s='';
+  s+='<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="#999"/>';
+  s+='<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(H-padB)+'" stroke="#999"/>';
+  pts.forEach(function(p){ s+='<circle cx="'+X(p[0]).toFixed(1)+'" cy="'+Y(p[1]).toFixed(1)+'" r="3.4" fill="#2b50aa" opacity="0.75"/>'; });
+  s+='<line x1="'+X(x0)+'" y1="'+Y(fit.a+fit.b*x0).toFixed(1)+'" x2="'+X(x1)+'" y2="'+Y(fit.a+fit.b*x1).toFixed(1)+'" stroke="#c0392b" stroke-width="2"/>';
+  s+='<text x="'+((padL+W-padR)/2)+'" y="'+(H-8)+'" font-size="12" text-anchor="middle" fill="#555">'+T.label+'</text>';
+  s+='<text x="14" y="'+(H/2)+'" font-size="12" text-anchor="middle" fill="#555" transform="rotate(-90 14 '+(H/2)+')">symptom reduction (%)</text>';
+  svg.innerHTML=s;
+  document.getElementById('trOut').innerHTML='<strong>'+T.label+':</strong> R&sup2; = '+fit.r2.toFixed(2)+' in the transformed space. '+T.verdict;
+}
+document.querySelectorAll('[data-tr]').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('[data-tr]').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); trMode=b.getAttribute('data-tr'); drawTr();
+  });
+});
+
+/* ---------- confusion matrix explorer ---------- */
+var CONF = [[0, 0.18], [0, 0.209], [1, 0.8], [0, 0.355], [0, 0.108], [1, 0.41], [0, 0.108], [0, 0.137], [0, 0.305], [0, 0.366], [1, 0.194], [0, 0.57], [0, 0.421], [0, 0.137], [1, 0.734], [0, 0.137], [0, 0.285], [0, 0.154], [1, 0.821], [0, 0.224], [0, 0.769], [1, 0.834], [0, 0.18], [0, 0.091], [0, 0.087], [1, 0.16], [0, 0.324], [0, 0.154], [1, 0.834], [0, 0.399], [0, 0.761], [0, 0.087], [0, 0.137], [0, 0.377], [0, 0.148], [0, 0.148], [0, 0.091], [0, 0.216], [1, 0.687], [1, 0.716], [0, 0.432], [0, 0.16], [1, 0.366], [0, 0.547], [0, 0.143], [1, 0.324], [1, 0.734], [0, 0.345], [0, 0.388], [1, 0.734], [1, 0.603], [0, 0.148], [0, 0.535], [1, 0.814], [1, 0.18], [0, 0.792], [0, 0.512], [1, 0.592], [0, 0.267], [0, 0.099], [0, 0.091], [0, 0.592], [1, 0.847], [1, 0.524], [1, 0.285], [1, 0.697], [0, 0.828], [1, 0.18], [0, 0.122], [1, 0.828], [0, 0.099], [1, 0.785], [0, 0.143], [0, 0.127], [0, 0.224], [0, 0.249], [0, 0.267], [0, 0.091], [0, 0.761], [1, 0.743], [0, 0.603], [1, 0.807], [0, 0.821], [1, 0.853], [0, 0.305], [0, 0.535], [1, 0.687], [1, 0.592], [1, 0.716], [1, 0.603], [1, 0.314], [1, 0.489], [0, 0.173], [1, 0.828], [1, 0.792], [0, 0.535], [1, 0.687], [1, 0.267], [0, 0.305], [0, 0.432], [0, 0.216], [0, 0.087], [0, 0.314], [1, 0.646], [0, 0.209], [0, 0.625], [1, 0.524], [0, 0.345], [1, 0.657], [1, 0.761], [1, 0.828], [1, 0.677], [0, 0.117], [1, 0.267], [0, 0.455], [0, 0.112], [1, 0.345], [0, 0.137], [0, 0.478], [0, 0.16], [0, 0.216], [1, 0.241], [1, 0.841], [0, 0.366], [0, 0.478], [1, 0.814], [0, 0.087], [0, 0.224], [1, 0.345], [1, 0.792], [1, 0.646], [0, 0.603], [0, 0.305], [1, 0.761], [0, 0.16], [1, 0.324], [0, 0.285], [0, 0.084], [0, 0.117], [0, 0.707], [0, 0.821], [0, 0.201], [0, 0.112], [0, 0.137], [0, 0.103], [1, 0.716], [0, 0.099], [1, 0.614], [1, 0.716], [0, 0.18], [0, 0.187], [0, 0.216], [1, 0.687], [1, 0.821], [1, 0.677], [1, 0.216], [0, 0.646], [1, 0.625], [0, 0.345], [0, 0.132], [0, 0.249], [1, 0.734], [1, 0.432], [0, 0.127], [1, 0.807], [0, 0.432], [0, 0.276], [0, 0.095], [1, 0.501], [1, 0.478], [0, 0.143], [0, 0.761], [1, 0.421], [0, 0.112], [1, 0.167], [0, 0.216], [1, 0.677], [1, 0.687], [1, 0.734], [0, 0.535], [1, 0.8], [1, 0.249], [0, 0.512], [1, 0.558], [0, 0.295], [1, 0.377], [1, 0.636], [1, 0.769], [0, 0.807], [0, 0.233], [1, 0.646], [0, 0.677], [0, 0.821], [1, 0.558], [0, 0.173], [1, 0.667], [0, 0.154], [0, 0.305], [1, 0.41], [1, 0.646], [1, 0.154], [1, 0.625], [1, 0.143], [1, 0.314], [0, 0.132], [0, 0.091], [1, 0.258], [0, 0.834], [0, 0.489], [1, 0.636], [0, 0.187], [1, 0.173], [1, 0.8], [0, 0.657], [0, 0.41], [0, 0.224], [1, 0.769], [0, 0.388], [1, 0.099], [1, 0.769], [1, 0.345], [1, 0.366], [0, 0.305], [1, 0.233], [1, 0.524], [0, 0.241], [1, 0.432], [0, 0.112], [1, 0.743], [0, 0.18], [0, 0.535], [0, 0.216], [0, 0.16], [0, 0.154], [1, 0.636], [0, 0.103], [0, 0.716], [0, 0.388], [0, 0.377], [0, 0.18]];
+var METRICS = [
+  {id:'acc',  name:'Accuracy',    cells:['cTP','cFP','cFN','cTN'], f:function(c){return (c.tp+c.tn)/(c.tp+c.fp+c.fn+c.tn);}},
+  {id:'sens', name:'Sensitivity', cells:['cTP','cFN'],             f:function(c){return c.tp/(c.tp+c.fn);}},
+  {id:'spec', name:'Specificity', cells:['cTN','cFP'],             f:function(c){return c.tn/(c.tn+c.fp);}},
+  {id:'prec', name:'Precision',   cells:['cTP','cFP'],             f:function(c){return c.tp/(c.tp+c.fp);}},
+  {id:'f1',   name:'F1',          cells:['cTP','cFP','cFN'],       f:function(c){var p=c.tp/(c.tp+c.fp), r=c.tp/(c.tp+c.fn); return 2*p*r/(p+r);}}
+];
+var activeMetric = null;
+function confCounts(thr){
+  var c={tp:0,fp:0,tn:0,fn:0};
+  CONF.forEach(function(r){ var pred = r[1]>=thr ? 1 : 0;
+    if(pred===1 && r[0]===1)c.tp++; else if(pred===1)c.fp++;
+    else if(r[0]===1)c.fn++; else c.tn++; });
+  return c;
+}
+function drawConf(){
+  var thr=parseFloat(document.getElementById('thrSlider').value);
+  document.getElementById('thrVal').textContent=thr.toFixed(2);
+  var c=confCounts(thr);
+  var map={cTP:c.tp, cFP:c.fp, cFN:c.fn, cTN:c.tn};
+  Object.keys(map).forEach(function(id){
+    document.querySelector('#'+id+' .n').textContent=map[id];
+  });
+  var chips=document.getElementById('metricChips'); chips.innerHTML='';
+  METRICS.forEach(function(m){
+    var b=document.createElement('button'); b.className='chip'+(activeMetric===m.id?' on':'');
+    b.textContent=m.name+': '+(m.f(c)*100).toFixed(0)+'%';
+    b.addEventListener('click',function(){
+      activeMetric = (activeMetric===m.id ? null : m.id);
+      ['cTP','cFP','cFN','cTN'].forEach(function(id){document.getElementById(id).classList.remove('hl');});
+      if(activeMetric){ m.cells.forEach(function(id){document.getElementById(id).classList.add('hl');}); }
+      drawConf();
+    });
+    chips.appendChild(b);
+  });
+  document.getElementById('cmOut').innerHTML='Threshold '+thr.toFixed(2)+': the model flags <strong>'+
+    (c.tp+c.fp)+'</strong> of '+CONF.length+' patients. It catches <strong>'+c.tp+'</strong> of the '+
+    (c.tp+c.fn)+' who truly were readmitted, and misses <strong>'+c.fn+'</strong>.';
+}
+document.getElementById('thrSlider').addEventListener('input',drawConf);
+
+document.documentElement.style.scrollBehavior='smooth';
+drawTr(); drawConf();
+</script>
+</body></html>
