@@ -16,7 +16,7 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
   and prediction, transformations, fit metrics, diagnostic plots, influence,
   logistic regression, confusion matrix) with verified toy healthcare examples
 - **Statistics & Probability → [sampling-bootstrapping-distributions](stats-and-prob/sampling-bootstrapping-distributions/)**
-  — Sampling and Bootstrapping Distributions: population, samples, the sampling
+  — Sampling & Bootstrapping: population, samples, the sampling
   distribution, standard error, confidence intervals, and bootstrapping in one
   connected story (a town's blood pressure) with interactive labs
 - **Statistics & Probability → [practitioners-guide](stats-and-prob/practitioners-guide/)**
