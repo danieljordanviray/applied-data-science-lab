@@ -24,7 +24,7 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
   ANOVA, proportions, chi-squared, rank tests) with verified toy healthcare examples
 - **Causal Inference → [difference-in-differences](causal-inference/difference-in-differences/)**
   — Difference-in-Differences, plus the staggered-timing version
-- **SQL → [sql](sql/)** — EXISTS vs IN/NOT IN, COALESCE/NULLIF, window functions,
+- **SQL (Advanced) → [sql](sql/)** — EXISTS vs IN/NOT IN, COALESCE/NULLIF, window functions,
   date spines, CTEs: quick-reference notes with clinical toy examples
 
 ## Layout

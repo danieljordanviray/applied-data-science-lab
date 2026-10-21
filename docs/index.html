@@ -24,6 +24,10 @@ h2.cat { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; fo
 .soon { color: #888; font-style: italic; }
 .hidden { display: none; }
 #noresults { display: none; color: #555; margin-top: 2em; }
+.seeall { margin: .2em 0 0; }
+.seeall a { font-weight: 600; text-decoration: none; }
+.seeall a:hover { text-decoration: underline; }
+
 </style></head><body>
 <h1>Applied Data Science Lab</h1>
 <p>Intuitive explanations of data science techniques used in the real world, written for practitioners. Focused on applications in healthcare and biology.</p>
@@ -33,9 +37,10 @@ h2.cat { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; fo
 <div id="index">
 <section data-cat="stats-and-prob">
 <h2 class="cat">Statistics &amp; Probability</h2>
-<div class="post"><a class="title" href="../stats-and-prob/practitioners-guide/practitioners-guide.html">Practitioner's Guide to Statistical Tests</a><p>A one-page method bank: z-tests, t-tests, ANOVA, chi-squared, proportions, and the rank tests — when to use each, a healthcare example with real output, the assumptions, the fallback, and the Python code.</p></div>
 <div class="post"><a class="title" href="../stats-and-prob/sampling-bootstrapping-distributions/sampling-bootstrapping-distributions.html">Sampling &amp; Bootstrapping</a><p>Population, samples, the sampling distribution, standard error, and bootstrapping — one connected story about a town's blood pressure, with interactive labs.</p></div>
+<div class="post"><a class="title" href="../stats-and-prob/practitioners-guide/practitioners-guide.html">Practitioner's Guide to Statistical Tests</a><p>A one-page method bank: z-tests, t-tests, ANOVA, chi-squared, proportions, and the rank tests — when to use each, a healthcare example with real output, the assumptions, the fallback, and the Python code.</p></div>
 <div class="post"><a class="title" href="../stats-and-prob/p-values-power-playground/">Statistical Significance, Visualized</a><p>An interactive playground: run experiments, move the sliders, and see what p-values and statistical power actually mean. No math degree required.</p></div>
+<p class="seeall"><a href="statistics-and-probability.html">See all &rarr;</a></p>
 </section>
 <section data-cat="experimentation">
 <h2 class="cat">Experimentation</h2>
@@ -45,18 +50,19 @@ h2.cat { margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 6px; fo
 <h2 class="cat">Causal Inference</h2>
 <div class="post"><a class="title" href="../causal-inference/active-comparator-new-user/active-comparator-new-user.html">Active-Comparator, New-User Cohort Study with Difference-in-Differences</a><p>Does Ozempic lower the cost of obesity care? A study design using claims and enrollment data, explained end to end</p></div>
 <div class="post"><a class="title" href="../causal-inference/difference-in-differences/did-case-study.html">Difference-in-Differences</a><p>Did the program work? A state launches job training, a neighbor doesn’t — learn the 2×2 intuition, the regression you’d run at work, and the checks that keep you honest.</p></div>
+<p class="seeall"><a href="causal-inference.html">See all &rarr;</a></p>
 </section>
 <section data-cat="machine-learning">
 <h2 class="cat">Machine Learning</h2>
 <div class="post"><a class="title" href="../machine-learning/regression-guide/regression-guide.html">Linear and Logistic Regression Explained</a><p>A one-page method bank: fitting OLS in Python, transformations and back-transformations, the fit-metric family (R&sup2;, RSE, RMSE, MAE, MAPE), diagnostic plots, outliers vs leverage vs influence, logistic regression, and the confusion matrix.</p></div>
+<p class="seeall"><a href="machine-learning.html">See all &rarr;</a></p>
 </section>
 <section data-cat="sql">
-<h2 class="cat">SQL</h2>
+<h2 class="cat">SQL (Advanced)</h2>
 <div class="post"><a class="title" href="../sql/coalesce-nullif/coalesce-nullif.html">COALESCE and NULLIF</a><p>Tame NULLs and placeholder zeros: defaults for display, honest averages, and division without the divide-by-zero.</p></div>
 <div class="post"><a class="title" href="../sql/ctes-subqueries/ctes-subqueries.html">CTEs and Subqueries</a><p>Same question, two shapes: name your intermediate steps with WITH, or nest them inline. Readability is the difference.</p></div>
 <div class="post"><a class="title" href="../sql/date-spines/date-spines.html">Date Spines and CROSS JOINs</a><p>No row for quiet days? Build a calendar spine, cross it with your categories, and LEFT JOIN the events on — zeros included.</p></div>
-<div class="post"><a class="title" href="../sql/exists-vs-in-not-in/exists-vs-in-not-in.html">EXISTS vs IN / NOT IN</a><p>Three ways to ask ‘who has a matching row?’ — plus the NULL trap that makes NOT IN silently return nothing.</p></div>
-<div class="post"><a class="title" href="../sql/window-functions/window-functions.html">Window Functions</a><p>ROW_NUMBER, RANK, LAG/LEAD, rolling averages and running totals — per patient, per category — without collapsing rows.</p></div>
+<p class="seeall"><a href="sql.html">See all &rarr;</a></p>
 </section>
 </div>
 <p id="noresults">No topics match that filter.</p>
