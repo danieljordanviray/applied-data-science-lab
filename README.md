@@ -15,7 +15,7 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
   — The Practitioner's Guide to Regression: a one-page method bank (OLS fitting
   and prediction, transformations, fit metrics, diagnostic plots, influence,
   logistic regression, confusion matrix) with verified toy healthcare examples
-- **Statistics & Probability → [sampling-bootstrapping-distributions](stats-and-prob/sampling-bootstrapping-distributions/)**
+- **Statistics & Probability → [sampling-and-bootstrapping](stats-and-prob/sampling-and-bootstrapping/)**
   — Sampling & Bootstrapping: population, samples, the sampling
   distribution, standard error, confidence intervals, and bootstrapping in one
   connected story (a town's blood pressure) with interactive labs
