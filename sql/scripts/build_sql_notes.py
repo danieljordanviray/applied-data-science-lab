@@ -27,6 +27,7 @@ th, td { border: 1px solid #ccc; padding: 6px 12px; text-align: left; }
 th { background: #f0f0f0; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .small { color: #555; font-size: 0.9em; }
+.author { color: #888; font-size: 0.85em; }
 code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 0.88em; }
 pre { background: #f4f4f4; padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.82em; }
 .null { color: #999; font-style: italic; }
@@ -72,6 +73,8 @@ def page(slug, title, subtitle, body):
 {STYLE}</head><body>
 {NAV}
 <h1>{escape(title)}</h1>
+<p class="small">October 11, 2026</p>
+<p class="author">Author: Daniel Jordan Viray</p>
 <p class="small">{subtitle}</p>
 {body}
 <div class="proveit"><strong>Prove it.</strong> Every query on this page was run
