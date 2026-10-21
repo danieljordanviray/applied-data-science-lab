@@ -176,6 +176,7 @@ h2{font-size:1.35em; margin:1.7em 0 .3em; border-bottom:2px solid var(--soft); p
 h3{font-size:1.13em; margin:1.5em 0 .2em; color:var(--ink)}
 a{color:var(--accent); text-decoration:none} a:hover{text-decoration:underline}
 .small{color:#666; font-size:.92em}
+.author{color:#888; font-size:.85em}
 .lede{font-size:1.06em}
 .box{background:var(--soft); border-radius:8px; padding:12px 16px; margin:1em 0}
 .warn{background:var(--warnbg); border-radius:8px; padding:12px 16px; margin:1em 0}
@@ -227,6 +228,7 @@ HEAD = """<!DOCTYPE html>
 <p class="small"><a href="https://danieljordanviray.github.io/applied-data-science-lab/docs/">&larr; Homepage</a></p>
 <h1>The Practitioner's Guide to Statistical Tests</h1>
 <p class="small">October 17, 2026</p>
+<p class="author">Author: Daniel Jordan Viray</p>
 <p class="lede">Ever stared at a dataset and wondered: z-test or t-test? ANOVA or Kruskal-Wallis?
 And what <em>is</em> a Wilcoxon signed-rank test, anyway? This guide is a method bank — every common test on one
 page: when to use it, a healthcare example with real output, the assumptions to check, the fallback test when
