@@ -243,6 +243,7 @@ h2{font-size:1.35em; margin:1.7em 0 .3em; border-bottom:2px solid var(--soft); p
 h3{font-size:1.13em; margin:1.4em 0 .2em}
 a{color:var(--accent); text-decoration:none} a:hover{text-decoration:underline}
 .small{color:#666; font-size:.92em}
+.author{color:#888; font-size:.85em}
 .lede{font-size:1.06em}
 .box{background:var(--soft); border-radius:8px; padding:12px 16px; margin:1em 0}
 .warn{background:var(--warnbg); border-radius:8px; padding:12px 16px; margin:1em 0}
@@ -301,6 +302,7 @@ HEAD = """<!DOCTYPE html>
 <p class="small"><a href="https://danieljordanviray.github.io/applied-data-science-lab/docs/">&larr; Homepage</a></p>
 <h1>The Practitioner's Guide to Regression</h1>
 <p class="small">October 18, 2026</p>
+<p class="author">Author: Daniel Jordan Viray</p>
 <p class="lede">Regression is the first real model most of us learn — and the one that quietly shows up
 everywhere else. This is the working cheat sheet: fit an OLS model in Python and predict with it, bend
 variables until the relationship is straight (and bend the answer back to interpret it), judge fit with the
