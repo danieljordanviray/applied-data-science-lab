@@ -9,6 +9,10 @@ and includes checks a human can verify. No trust-me statistics.
 
 Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
 
+- **Experimentation → [ab-testing-playbook](experimentation/ab-testing-playbook/)**
+  — The Practical A/B Testing Playbook: designing, sizing, and reading A/B
+  tests — power and sample size, the pitfalls that fake a win, ratio metrics
+  and the Delta Method, with an interactive power diagram
 - **Statistics & Probability → [p-values-power-playground](stats-and-prob/p-values-power-playground/)**
   — Statistical Significance, Visualized: an interactive p-value & power playground
 - **Machine Learning → [regression-guide](machine-learning/regression-guide/)**
@@ -30,7 +34,7 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
 ## Layout
 
 - `stats-and-prob/` — confidence intervals, t-tests, real-data reference studies
-- `experimentation/` — A/B testing lives here next
+- `experimentation/` — A/B testing and experiment-design case studies
 - `causal-inference/` — difference-in-differences case studies
 - `sql/` — quick-reference SQL notes (EXISTS, COALESCE/NULLIF, windows, date spines, CTEs)
 - `machine-learning/` — saved for later in the track
