@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Daniel Jordan Viray">
+<title>Experimentation — Applied Data Science Lab</title>
+<meta property="og:title" content="Experimentation — Applied Data Science Lab — Daniel Jordan Viray">
+<meta property="og:description" content="Intuitive explanations of data science techniques used in the real world, written for practitioners. Focused on applications in healthcare and biology.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://danieljordanviray.github.io/applied-data-science-lab/docs/experimentation.html">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Experimentation — Applied Data Science Lab — Daniel Jordan Viray">
+<meta name="twitter:description" content="Intuitive explanations of data science techniques used in the real world, written for practitioners. Focused on applications in healthcare and biology.">
+<style>
+body { font-family: -apple-system, Georgia, serif; max-width: 760px; margin: 0 auto;
+       padding: 40px 18px; line-height: 1.7; color: #1a1a1a; }
+a { color: #1f6feb; }
+#filter { width: 100%; font-size: 1rem; padding: 10px 14px; border: 1px solid #ccc;
+          border-radius: 8px; margin: 18px 0 6px; font-family: inherit; box-sizing: border-box; }
+.post { margin: 1em 0; }
+.post a.title { font-size: 1.1em; font-weight: 600; text-decoration: none; }
+.post a.title:hover { text-decoration: underline; }
+.post p { margin: 4px 0; color: #333; }
+.hidden { display: none; }
+#noresults { display: none; color: #555; margin-top: 2em; }
+.back { margin-bottom: .4em; }
+.author { color: #888; font-size: .95em; margin: -4px 0 0; }
+</style></head><body>
+<p class="back"><a href="index.html">&larr; Homepage</a></p>
+<h1>Experimentation</h1>
+<p class="author">Author: Daniel Jordan Viray</p>
+<input id="filter" type="text" placeholder="Filter topics&hellip;" aria-label="Filter topics">
+<div id="index">
+<section data-cat="experimentation">
+<div class="post"><a class="title" href="../experimentation/ab-testing-playbook/ab-testing-playbook.html">The Practical A/B Testing Playbook</a><p>A getting-started guide to running A/B tests in the real world: locking in design parameters, calculating power and sample size, the pitfalls that fake a win (multiple variants, multiple metrics, sample ratio mismatch), ratio metrics and the Delta Method — with an interactive power diagram.</p></div>
+</section>
+</div>
+<p id="noresults">No topics match that filter.</p>
+<script>
+const input = document.getElementById("filter");
+input.addEventListener("input", () => {
+  const q = input.value.trim().toLowerCase();
+  let visible = 0;
+  document.querySelectorAll("#index .post").forEach(post => {
+    const hit = !q || post.textContent.toLowerCase().includes(q);
+    post.classList.toggle("hidden", !hit);
+    if (hit) visible++;
+  });
+  document.getElementById("noresults").style.display = visible ? "none" : "block";
+});
+</script>
+</body></html>
