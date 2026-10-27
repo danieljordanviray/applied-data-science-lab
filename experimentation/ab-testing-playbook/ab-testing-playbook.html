@@ -19,51 +19,76 @@
 {"@context":"https://schema.org","@type":"BlogPosting","headline":"The Practical A/B Testing Playbook","description":"A getting-started guide to running A/B tests in a real-world setting: practical implementation, plus enough statistical theory to reason through real-world problems.","image":"https://danieljordanviray.github.io/applied-data-science-lab/experimentation/ab-testing-playbook/og-image.jpg","datePublished":"2026-10-26T12:00:00-04:00","author":{"@type":"Person","name":"Daniel Jordan Viray","url":"https://danieljordanviray.com","sameAs":["https://www.linkedin.com/in/danieljordanviray","https://github.com/danieljordanviray"]}}
 </script>
 <style>
-body { font-family: -apple-system, Georgia, serif; max-width: 760px; margin: 0 auto;
-       padding: 40px 18px; line-height: 1.7; color: #1a1a1a; font-size: 17px; }
-a { color: #1f6feb; }
-h1 { font-size: 1.9em; line-height: 1.25; margin: .2em 0 .35em; }
-h2 { font-size: 1.45em; line-height: 1.3; margin: 1.9em 0 .6em; }
-h3 { font-size: 1.18em; line-height: 1.35; margin: 1.5em 0 .5em; }
+:root { --bg:#f7f5f1; --surface:#ffffff; --surface2:#f4f6fb; --ink:#1c1c28; --accent:#2b50aa;
+        --accent-soft:#eef4ff; --line:#e3ded2; --line2:#d9dee9;
+        --shadow:0 1px 3px rgba(28,28,40,.05), 0 10px 30px rgba(28,28,40,.05); }
+* { box-sizing: border-box; }
+body { font-family: Georgia, 'Times New Roman', serif; background: var(--bg); color: var(--ink);
+       margin: 0; font-size: 17px; line-height: 1.68; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 880px; margin: 0 auto; padding: 34px 20px 70px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.back { font-size: .92em; margin: 0 0 1.4em; }
+.back a { display: inline-block; background: var(--surface); border: 1px solid var(--line2);
+          border-radius: 999px; padding: 6px 14px; font-weight: 600; color: var(--ink); }
+.back a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+h1 { font-size: 2em; line-height: 1.22; margin: .1em 0 .3em; }
+.small { color: #6b7280; font-size: .95em; margin: 0 0 .15em; }
+.author { color: #9aa0aa; font-size: .85em; margin: 0 0 1.2em; }
+.lede { font-size: 1.07em; color: #333; }
+section.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+       box-shadow: var(--shadow); padding: 26px 34px 12px; margin: 26px 0; }
+h2 { font-size: 1.42em; line-height: 1.3; margin: .1em 0 .65em; padding-bottom: .32em;
+     border-bottom: 2px solid #eceadf; position: relative; }
+section.card > h2::after { content: ""; position: absolute; left: 0; bottom: -2px;
+     width: 72px; height: 2px; background: var(--accent); }
+h3 { font-size: 1.16em; line-height: 1.35; margin: 1.5em 0 .5em; }
 p { margin: 0 0 1em; }
 ul, ol { margin: 0 0 1em; padding-left: 1.5em; }
 li { margin: .35em 0; }
 li > ul, li > ol { margin: .35em 0 .2em; }
-.small { color: #666; font-size: .92em; margin: 0 0 .2em; }
-.author { color: #888; font-size: .85em; margin: 0 0 1.4em; }
-.back { font-size: .92em; margin: 0 0 1.2em; }
-table { border-collapse: collapse; margin: 1.1em 0 1.4em; font-size: .95em; }
-th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; vertical-align: top; }
-th { background: #f6f8fa; }
-.toc { background: #f7f9fb; border: 1px solid #e4e8ee; border-radius: 10px;
-       padding: 18px 24px 8px; margin: 1.4em 0 2em; }
-.toc h2 { margin: 0 0 .5em; font-size: 1.25em; }
+table { border-collapse: collapse; margin: 1.1em 0 1.4em; font-size: .95em; width: 100%; }
+th, td { border: 1px solid var(--line2); padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background: var(--accent-soft); }
+tbody tr:nth-child(even) td { background: #faf9f6; }
+.toc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+       box-shadow: var(--shadow); padding: 20px 28px 10px; margin: 1.6em 0 0; }
+.toc h2 { font-size: 1.02em; letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+       border-bottom: none; margin: 0 0 .6em; padding-bottom: 0; }
 .toc ul { list-style: none; padding-left: 0; }
-.toc ul ul { padding-left: 1.4em; margin: .2em 0 .4em; color: #555; font-size: .95em; }
+.toc ul ul { padding-left: 1.4em; margin: .2em 0 .4em; color: #666; font-size: .95em; }
 .toc li { margin: .45em 0; }
-.toc a { text-decoration: none; font-weight: 600; }
-.toc a:hover { text-decoration: underline; }
-.mathdisplay { text-align: center; margin: 1.1em 0; }
+.toc a { text-decoration: none; font-weight: 600; color: var(--ink); }
+.toc a:hover { color: var(--accent); text-decoration: underline; }
+.mathdisplay { background: var(--surface2); border: 1px dashed var(--line2); border-radius: 12px;
+       padding: 16px 12px; text-align: center; margin: 1.2em 0; }
 .mathdisplay svg { max-width: 100%; }
-.viz { border: 1px solid #e4e8ee; border-radius: 12px; background: #fbfcfe;
-       padding: 18px 20px 10px; margin: 1.2em 0 1.6em; }
+.viz { border: 1px solid var(--line2); border-radius: 14px; background: var(--surface2);
+       padding: 20px 22px 12px; margin: 1.2em 0 1.6em; }
 .viz svg { width: 100%; height: auto; display: block; }
-.viz .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px; margin-top: 10px; }
+.viz .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px; margin-top: 12px; }
 .viz label { font-size: .92em; color: #333; display: block; margin: 0 0 2px; }
 .viz label b { float: right; font-variant-numeric: tabular-nums; }
-.viz input[type=range] { width: 100%; margin: 2px 0 8px; }
-.viz .readout { display: flex; flex-wrap: wrap; gap: 8px 22px; border-top: 1px solid #e4e8ee;
-       padding-top: 10px; margin-top: 4px; font-size: .95em; }
+.viz input[type=range] { width: 100%; margin: 2px 0 8px; accent-color: var(--accent); }
+.viz .readout { display: flex; flex-wrap: wrap; gap: 8px 22px; background: var(--surface);
+       border: 1px solid var(--line2); border-radius: 10px; padding: 10px 14px;
+       margin-top: 6px; font-size: .95em; }
 .viz .readout b { font-variant-numeric: tabular-nums; }
-@media (max-width: 560px) { .viz .controls { grid-template-columns: 1fr; } }
-.foot { margin-top: 3em; padding-top: 1em; border-top: 1px solid #e4e8ee; color: #888; font-size: .88em; }
+.fix { background: var(--accent-soft); border-left: 4px solid var(--accent);
+       border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 1em 0; }
+.pull { border-left: 3px solid var(--line2); padding: 2px 0 2px 16px; color: #3f4756; }
+.foot { margin-top: 2.6em; padding-top: 1em; border-top: 1px solid var(--line);
+        color: #8a8f98; font-size: .88em; text-align: center; }
+@media (max-width: 560px) { .viz .controls { grid-template-columns: 1fr; }
+       section.card { padding: 20px 18px 8px; } }
 </style></head><body>
+<div class="wrap">
 <p class="back"><a href="../../docs/index.html">&larr; Homepage</a></p>
 <h1>The Practical A/B Testing Playbook</h1>
 <p class="small">October 26, 2026</p>
 <p class="author">Author: Daniel Jordan Viray</p>
 
-<p>This is a getting-started guide to running A/B tests in a real-world setting. It strikes a balance between practical implementation (how to actually run a test) and statistical theory (enough first principles required to reason through real-world problems).</p>
+<p class="lede">This is a getting-started guide to running A/B tests in a real-world setting. It strikes a balance between practical implementation (how to actually run a test) and statistical theory (enough first principles required to reason through real-world problems).</p>
 
 <div class="toc">
 <h2>Table of Contents</h2>
@@ -88,6 +113,7 @@ th { background: #f6f8fa; }
 </ul>
 </div>
 
+<section class="card">
 <h2 id="the-scenario">The Scenario</h2>
 
 <p>Every test begins with a real-world problem. For example, imagine we are testing a new product feature to determine if it should be rolled out to all users. Currently, an online self-service help search bar is located at the bottom of our application. However, our in-person customer support by phone is overwhelmed, and we therefore want to increase self-service usage.</p>
@@ -103,7 +129,9 @@ th { background: #f6f8fa; }
 <p>To make our example concrete, let&rsquo;s use this scenario: We currently get 100 visitors a week, and 2 of them use the help platform. Therefore, our status-quo baseline is 2%. We want to increase that rate to 5%. For practical business reasons, we will not ship the product change unless we are confident it results in at least that 5% usage rate.</p>
 
 <p>To test this, we will expose a random group of users to Control A (the status quo) and another random group to Treatment B (the new placement) to see if we can gather enough evidence that the product change works. Note: we randomize the users based on user_id.</p>
+</section>
 
+<section class="card">
 <h2 id="experiment-design">Experiment Design &amp; Parameters</h2>
 
 <p>Now that we understand the problem, we must lock in our statistical parameters before launching the experiment. Defining these upfront prevents us from moving the goalposts later:</p>
@@ -237,7 +265,9 @@ th { background: #f6f8fa; }
   draw();
 })();
 </script>
+</section>
 
+<section class="card">
 <h2 id="calculating-sample-size">Power Analysis: Calculating Sample Size</h2>
 
 <p>With our parameters defined, our next step is to determine how many users we need in our test. Given these parameters, we can calculate the exact sample size needed using any online calculator. The formula for minimum n-size needed is:</p>
@@ -277,7 +307,9 @@ th { background: #f6f8fa; }
 <p>While Cohen&rsquo;s h calculation was already baked into our sample size calculation behind the scenes, Cohen&rsquo;s h is highly useful for post-hoc analysis.</p>
 
 <p>For example, if you are resource-constrained and just ran a test on whatever n you could gather, Cohen&rsquo;s h helps quantify whether the statistically significant result you achieved is actually a meaningful shift in user behavior.</p>
+</section>
 
+<section class="card">
 <h2 id="data-interpretation">Data Interpretation and Decision</h2>
 
 <p>Let&rsquo;s say you launch the experiment, and now it&rsquo;s been 12 weeks. After running the experiment and gathering our 1,176 data points, our dataset looks like a ledger of binary outcomes:</p>
@@ -290,7 +322,9 @@ th { background: #f6f8fa; }
 <p>To determine if there is a statistically significant difference between the two proportions, we run a <strong>Two-Sample Proportion Z-Test</strong>. If the resulting p-value is less than our alpha (0.05), we reject the null hypothesis and confidently launch the feature.</p>
 
 <p>Note: For more information on hypothesis testing, especially when sample sizes are small and/or the underlying data is not normally distributed (thereby requiring non-parametric tests), check out my deeper guide on Hypothesis Testing <a href="https://danieljordanviray.github.io/applied-data-science-lab/stats-and-prob/practitioners-guide/practitioners-guide.html">here</a>.</p>
+</section>
 
+<section class="card">
 <h2 id="pitfalls">Pitfalls and Corrections</h2>
 
 <p>In a perfect world, a single Z-test is all you need. However, real-world realities often complicate our clean experimental design.</p>
@@ -307,7 +341,7 @@ th { background: #f6f8fa; }
 
 <p>With 3 treatments, our real false positive rate jumps to ~14%.</p>
 
-<p><strong>The Fix:</strong> We must have a stricter probability threshold to reject the null hypothesis. We therefore apply the <strong>Bonferroni correction</strong>, recalculating our target alpha as &alpha; / m.</p>
+<p class="fix"><strong>The Fix:</strong> We must have a stricter probability threshold to reject the null hypothesis. We therefore apply the <strong>Bonferroni correction</strong>, recalculating our target alpha as &alpha; / m.</p>
 
 <p>For three tests, our new threshold for significance becomes <span class="mathinline"><svg style="vertical-align: -0.566ex;" xmlns="http://www.w3.org/2000/svg" width="22.039ex" height="2.262ex" role="img" viewBox="0 -750 9741.1 1000" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><path id="MJX-1-TEX-I-1D6FC" d="M34 156Q34 270 120 356T309 442Q379 442 421 402T478 304Q484 275 485 237V208Q534 282 560 374Q564 388 566 390T582 393Q603 393 603 385Q603 376 594 346T558 261T497 161L486 147L487 123Q489 67 495 47T514 26Q528 28 540 37T557 60Q559 67 562 68T577 70Q597 70 597 62Q597 56 591 43Q579 19 556 5T512 -10H505Q438 -10 414 62L411 69L400 61Q390 53 370 41T325 18T267 -2T203 -11Q124 -11 79 39T34 156ZM208 26Q257 26 306 47T379 90L403 112Q401 255 396 290Q382 405 304 405Q235 405 183 332Q156 292 139 224T121 120Q121 71 146 49T208 26Z"></path><path id="MJX-1-TEX-N-2F" d="M423 750Q432 750 438 744T444 730Q444 725 271 248T92 -240Q85 -250 75 -250Q68 -250 62 -245T56 -231Q56 -221 230 257T407 740Q411 750 423 750Z"></path><path id="MJX-1-TEX-I-1D45A" d="M21 287Q22 293 24 303T36 341T56 388T88 425T132 442T175 435T205 417T221 395T229 376L231 369Q231 367 232 367L243 378Q303 442 384 442Q401 442 415 440T441 433T460 423T475 411T485 398T493 385T497 373T500 364T502 357L510 367Q573 442 659 442Q713 442 746 415T780 336Q780 285 742 178T704 50Q705 36 709 31T724 26Q752 26 776 56T815 138Q818 149 821 151T837 153Q857 153 857 145Q857 144 853 130Q845 101 831 73T785 17T716 -10Q669 -10 648 17T627 73Q627 92 663 193T700 345Q700 404 656 404H651Q565 404 506 303L499 291L466 157Q433 26 428 16Q415 -11 385 -11Q372 -11 364 -4T353 8T350 18Q350 29 384 161L420 307Q423 322 423 345Q423 404 379 404H374Q288 404 229 303L222 291L189 157Q156 26 151 16Q138 -11 108 -11Q95 -11 87 -5T76 7T74 17Q74 30 112 181Q151 335 151 342Q154 357 154 369Q154 405 129 405Q107 405 92 377T69 316T57 280Q55 278 41 278H27Q21 284 21 287Z"></path><path id="MJX-1-TEX-N-3D" d="M56 347Q56 360 70 367H707Q722 359 722 347Q722 336 708 328L390 327H72Q56 332 56 347ZM56 153Q56 168 72 173H708Q722 163 722 153Q722 140 707 133H70Q56 140 56 153Z"></path><path id="MJX-1-TEX-N-30" d="M96 585Q152 666 249 666Q297 666 345 640T423 548Q460 465 460 320Q460 165 417 83Q397 41 362 16T301 -15T250 -22Q224 -22 198 -16T137 16T82 83Q39 165 39 320Q39 494 96 585ZM321 597Q291 629 250 629Q208 629 178 597Q153 571 145 525T137 333Q137 175 145 125T181 46Q209 16 250 16Q290 16 318 46Q347 76 354 130T362 333Q362 478 354 524T321 597Z"></path><path id="MJX-1-TEX-N-2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z"></path><path id="MJX-1-TEX-N-35" d="M164 157Q164 133 148 117T109 101H102Q148 22 224 22Q294 22 326 82Q345 115 345 210Q345 313 318 349Q292 382 260 382H254Q176 382 136 314Q132 307 129 306T114 304Q97 304 95 310Q93 314 93 485V614Q93 664 98 664Q100 666 102 666Q103 666 123 658T178 642T253 634Q324 634 389 662Q397 666 402 666Q410 666 410 648V635Q328 538 205 538Q174 538 149 544L139 546V374Q158 388 169 396T205 412T256 420Q337 420 393 355T449 201Q449 109 385 44T229 -22Q148 -22 99 32T50 154Q50 178 61 192T84 210T107 214Q132 214 148 197T164 157Z"></path><path id="MJX-1-TEX-N-33" d="M127 463Q100 463 85 480T69 524Q69 579 117 622T233 665Q268 665 277 664Q351 652 390 611T430 522Q430 470 396 421T302 350L299 348Q299 347 308 345T337 336T375 315Q457 262 457 175Q457 96 395 37T238 -22Q158 -22 100 21T42 130Q42 158 60 175T105 193Q133 193 151 175T169 130Q169 119 166 110T159 94T148 82T136 74T126 70T118 67L114 66Q165 21 238 21Q293 21 321 74Q338 107 338 175V195Q338 290 274 322Q259 328 213 329L171 330L168 332Q166 335 166 348Q166 366 174 366Q202 366 232 371Q266 376 294 413T322 525V533Q322 590 287 612Q265 626 240 626Q208 626 181 615T143 592T132 580H135Q138 579 143 578T153 573T165 566T175 555T183 540T186 520Q186 498 172 481T127 463Z"></path><path id="MJX-1-TEX-N-31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"></path><path id="MJX-1-TEX-N-37" d="M55 458Q56 460 72 567L88 674Q88 676 108 676H128V672Q128 662 143 655T195 646T364 644H485V605L417 512Q408 500 387 472T360 435T339 403T319 367T305 330T292 284T284 230T278 162T275 80Q275 66 275 52T274 28V19Q270 2 255 -10T221 -22Q210 -22 200 -19T179 0T168 40Q168 198 265 368Q285 400 349 489L395 552H302Q128 552 119 546Q113 543 108 522T98 479L95 458V455H55V458Z"></path></defs><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g><g><use data-c="1D6FC" xlink:href="#MJX-1-TEX-I-1D6FC"></use></g><g data-mjx-texclass="ORD" transform="translate(640,0)"><g><use data-c="2F" xlink:href="#MJX-1-TEX-N-2F"></use></g></g><g transform="translate(1140,0)"><use data-c="1D45A" xlink:href="#MJX-1-TEX-I-1D45A"></use></g><g transform="translate(2295.8,0)"><use data-c="3D" xlink:href="#MJX-1-TEX-N-3D"></use></g><g transform="translate(3351.6,0)"><use data-c="30" xlink:href="#MJX-1-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-1-TEX-N-2E" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-1-TEX-N-30" transform="translate(778,0)"></use><use data-c="35" xlink:href="#MJX-1-TEX-N-35" transform="translate(1278,0)"></use></g><g data-mjx-texclass="ORD" transform="translate(5129.6,0)"><g><use data-c="2F" xlink:href="#MJX-1-TEX-N-2F"></use></g></g><g transform="translate(5629.6,0)"><use data-c="33" xlink:href="#MJX-1-TEX-N-33"></use></g><g transform="translate(6407.3,0)"><use data-c="3D" xlink:href="#MJX-1-TEX-N-3D"></use></g><g transform="translate(7463.1,0)"><use data-c="30" xlink:href="#MJX-1-TEX-N-30"></use><use data-c="2E" xlink:href="#MJX-1-TEX-N-2E" transform="translate(500,0)"></use><use data-c="30" xlink:href="#MJX-1-TEX-N-30" transform="translate(778,0)"></use><use data-c="31" xlink:href="#MJX-1-TEX-N-31" transform="translate(1278,0)"></use><use data-c="37" xlink:href="#MJX-1-TEX-N-37" transform="translate(1778,0)"></use></g></g></g></svg></span>.</p>
 
@@ -315,13 +349,15 @@ th { background: #f6f8fa; }
 
 <p>Similarly, if you track your primary metric alongside 20 secondary metrics (e.g., sign-up rates, click-through rates, average purchase size, etc.), there is a ~64% chance that at least one of those secondary metrics will show a statistically significant difference purely by chance.</p>
 
-<p><strong>The Fix:</strong></p>
+<div class="fix"><p><strong>The Fix:</strong></p>
 
 <ul>
 <li>Establish a single primary metric before the test begins and make your business decision <em>solely</em> on that.</li>
 <li>If you must make decisions based on multiple metrics, apply a correction (like Bonferroni or Benjamini-Hochberg) to lower your p-value threshold, protecting you from false discoveries.</li>
-</ul>
+</ul></div>
+</section>
 
+<section class="card">
 <h2 id="sanity-checks">Sanity Checks and Post-Test Diagnostics</h2>
 
 <p>Even if your p-value screams &ldquo;success,&rdquo; you cannot trust it until you verify that the experiment&rsquo;s underlying mechanics and user behaviors didn&rsquo;t artificially skew the data.</p>
@@ -331,7 +367,7 @@ th { background: #f6f8fa; }
 <p>If we design a 50/50 split, we won&rsquo;t get an exact 50.0% / 50.0% distribution due to random noise&mdash;we might observe a 52/48 split. To verify whether this is harmless noise or a broken randomization pipeline, we run a <strong>Chi-Square Goodness-of-Fit Test</strong> comparing our observed traffic split against our expected 50/50 split.</p>
 
 <ul>
-<li><strong>The Action:</strong> If the Chi-Square test returns a statistically significant p-value (typically evaluated at a strict threshold like p &lt; 0.001), we have a <strong>Sample Ratio Mismatch (SRM)</strong>. This means a bug (e.g., logging failures, redirects, or slow page loads in Treatment B) is selectively dropping users. When SRM occurs, the test is invalid: stop the experiment, fix the engineering bug, and restart.</li>
+<li class="fix"><strong>The Action:</strong> If the Chi-Square test returns a statistically significant p-value (typically evaluated at a strict threshold like p &lt; 0.001), we have a <strong>Sample Ratio Mismatch (SRM)</strong>. This means a bug (e.g., logging failures, redirects, or slow page loads in Treatment B) is selectively dropping users. When SRM occurs, the test is invalid: stop the experiment, fix the engineering bug, and restart.</li>
 <li><strong>Proactive Prevention (A/A Testing):</strong> Before launching a major feature, run an <strong>A/A test</strong> where both Control and Treatment receive the exact same status quo experience. If your randomization engine and telemetry are healthy, you should observe no SRM and no statistically significant difference in conversion rates (beyond the expected 5% false-positive rate at &alpha; = 0.05).</li>
 </ul>
 
@@ -341,7 +377,7 @@ th { background: #f6f8fa; }
 
 <ul>
 <li><strong>The Problem:</strong> Simpson&rsquo;s Paradox occurs when a trend appears in separate subgroups (e.g., Treatment B wins on Mobile <em>and</em> wins on Desktop individually) but reverses or disappears when the data is aggregated together because one group&rsquo;s disproportionate volume weights the overall average.</li>
-<li><strong>The Fix:</strong> Use <strong>stratified sampling</strong> (blocking) during experiment design to guarantee an equal 50/50 split <em>within</em> both Mobile and Desktop cohorts, and always evaluate treatment lift across key segments alongside the aggregate topline metric.</li>
+<li class="fix"><strong>The Fix:</strong> Use <strong>stratified sampling</strong> (blocking) during experiment design to guarantee an equal 50/50 split <em>within</em> both Mobile and Desktop cohorts, and always evaluate treatment lift across key segments alongside the aggregate topline metric.</li>
 </ul>
 
 <h3>Primacy (Change Aversion) &amp; Novelty Effects</h3>
@@ -359,7 +395,9 @@ th { background: #f6f8fa; }
 <li><strong>Plot Treatment Lift Over Time:</strong> Track the daily difference between Treatment and Control. If the lift starts unusually high and decays (Novelty) or starts low and climbs (Change Aversion) before flattening out, you have a time-based bias. You may need to run the test longer until user behavior stabilizes.</li>
 <li><strong>Segment by New vs. Returning Users:</strong> This is the cleanest analytical check. Because <strong>New Users</strong> have zero prior experience with the old user interface, they are immune to both novelty and change aversion. Comparing Treatment vs. Control strictly among new users isolates the true, unconditioned impact of the feature.</li>
 </ol>
+</section>
 
+<section class="card">
 <h2 id="ratio-metrics">Ratio Metrics and the Delta Method</h2>
 
 <p>Beyond standard metrics, you might encounter metrics that don&rsquo;t fit perfectly into our straightforward Z-test structure. To understand <strong>Ratio Metrics</strong> and the <strong>Delta Method</strong>, we first have to recognize that every A/B test has a <strong>Unit of Randomization</strong> (how we split traffic, which is almost always by <em>User</em>) and a <strong>Unit of Analysis</strong> (what we are actually counting in the denominator of our metric).</p>
@@ -378,7 +416,7 @@ th { background: #f6f8fa; }
 
 <p><strong>Now, let&rsquo;s introduce a Ratio Metric to our scenario:</strong></p>
 
-<p>Suppose we say, <em>&ldquo;Looking at whether a user used the search bar once isn&rsquo;t enough. Some users log in 10 times a week. We want to know if moving the search bar to the top of the page increases the rate at which the search bar is used <strong>per session</strong> (or per pageview).&rdquo;</em></p>
+<p class="pull">Suppose we say, <em>&ldquo;Looking at whether a user used the search bar once isn&rsquo;t enough. Some users log in 10 times a week. We want to know if moving the search bar to the top of the page increases the rate at which the search bar is used <strong>per session</strong> (or per pageview).&rdquo;</em></p>
 
 <ul>
 <li><strong>The New Metric (Ratio Metric):</strong> Total Search Bar Uses / Total Application Sessions</li>
@@ -430,7 +468,9 @@ th { background: #f6f8fa; }
 <p>Because it recognizes that 5,000 sessions came from only 588 independent users (and adjusts for heavy power users via the covariance), the Delta Method gives you a wider, more realistic confidence interval.</p>
 
 <p>Once the Delta Method gives you that corrected Standard Error, you go right back to your normal playbook: you plug that new Standard Error into your Z-test or Confidence Interval (<span class="mathinline"><svg style="vertical-align: -0.357ex;" xmlns="http://www.w3.org/2000/svg" width="25.179ex" height="1.952ex" role="img" viewBox="0 -705 11129.2 862.8" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><path id="MJX-7-TEX-N-45" d="M128 619Q121 626 117 628T101 631T58 634H25V680H597V676Q599 670 611 560T625 444V440H585V444Q584 447 582 465Q578 500 570 526T553 571T528 601T498 619T457 629T411 633T353 634Q266 634 251 633T233 622Q233 622 233 621Q232 619 232 497V376H286Q359 378 377 385Q413 401 416 469Q416 471 416 473V493H456V213H416V233Q415 268 408 288T383 317T349 328T297 330Q290 330 286 330H232V196V114Q232 57 237 52Q243 47 289 47H340H391Q428 47 452 50T505 62T552 92T584 146Q594 172 599 200T607 247T612 270V273H652V270Q651 267 632 137T610 3V0H25V46H58Q100 47 109 49T128 61V619Z"></path><path id="MJX-7-TEX-N-73" d="M295 316Q295 356 268 385T190 414Q154 414 128 401Q98 382 98 349Q97 344 98 336T114 312T157 287Q175 282 201 278T245 269T277 256Q294 248 310 236T342 195T359 133Q359 71 321 31T198 -10H190Q138 -10 94 26L86 19L77 10Q71 4 65 -1L54 -11H46H42Q39 -11 33 -5V74V132Q33 153 35 157T45 162H54Q66 162 70 158T75 146T82 119T101 77Q136 26 198 26Q295 26 295 104Q295 133 277 151Q257 175 194 187T111 210Q75 227 54 256T33 318Q33 357 50 384T93 424T143 442T187 447H198Q238 447 268 432L283 424L292 431Q302 440 314 448H322H326Q329 448 335 442V310L329 304H301Q295 310 295 316Z"></path><path id="MJX-7-TEX-N-74" d="M27 422Q80 426 109 478T141 600V615H181V431H316V385H181V241Q182 116 182 100T189 68Q203 29 238 29Q282 29 292 100Q293 108 293 146V181H333V146V134Q333 57 291 17Q264 -10 221 -10Q187 -10 162 2T124 33T105 68T98 100Q97 107 97 248V385H18V422H27Z"></path><path id="MJX-7-TEX-N-69" d="M69 609Q69 637 87 653T131 669Q154 667 171 652T188 609Q188 579 171 564T129 549Q104 549 87 564T69 609ZM247 0Q232 3 143 3Q132 3 106 3T56 1L34 0H26V46H42Q70 46 91 49Q100 53 102 60T104 102V205V293Q104 345 102 359T88 378Q74 385 41 385H30V408Q30 431 32 431L42 432Q52 433 70 434T106 436Q123 437 142 438T171 441T182 442H185V62Q190 52 197 50T232 46H255V0H247Z"></path><path id="MJX-7-TEX-N-6D" d="M41 46H55Q94 46 102 60V68Q102 77 102 91T102 122T103 161T103 203Q103 234 103 269T102 328V351Q99 370 88 376T43 385H25V408Q25 431 27 431L37 432Q47 433 65 434T102 436Q119 437 138 438T167 441T178 442H181V402Q181 364 182 364T187 369T199 384T218 402T247 421T285 437Q305 442 336 442Q351 442 364 440T387 434T406 426T421 417T432 406T441 395T448 384T452 374T455 366L457 361L460 365Q463 369 466 373T475 384T488 397T503 410T523 422T546 432T572 439T603 442Q729 442 740 329Q741 322 741 190V104Q741 66 743 59T754 49Q775 46 803 46H819V0H811L788 1Q764 2 737 2T699 3Q596 3 587 0H579V46H595Q656 46 656 62Q657 64 657 200Q656 335 655 343Q649 371 635 385T611 402T585 404Q540 404 506 370Q479 343 472 315T464 232V168V108Q464 78 465 68T468 55T477 49Q498 46 526 46H542V0H534L510 1Q487 2 460 2T422 3Q319 3 310 0H302V46H318Q379 46 379 62Q380 64 380 200Q379 335 378 343Q372 371 358 385T334 402T308 404Q263 404 229 370Q202 343 195 315T187 232V168V108Q187 78 188 68T191 55T200 49Q221 46 249 46H265V0H257L234 1Q210 2 183 2T145 3Q42 3 33 0H25V46H41Z"></path><path id="MJX-7-TEX-N-61" d="M137 305T115 305T78 320T63 359Q63 394 97 421T218 448Q291 448 336 416T396 340Q401 326 401 309T402 194V124Q402 76 407 58T428 40Q443 40 448 56T453 109V145H493V106Q492 66 490 59Q481 29 455 12T400 -6T353 12T329 54V58L327 55Q325 52 322 49T314 40T302 29T287 17T269 6T247 -2T221 -8T190 -11Q130 -11 82 20T34 107Q34 128 41 147T68 188T116 225T194 253T304 268H318V290Q318 324 312 340Q290 411 215 411Q197 411 181 410T156 406T148 403Q170 388 170 359Q170 334 154 320ZM126 106Q126 75 150 51T209 26Q247 26 276 49T315 109Q317 116 318 175Q318 233 317 233Q309 233 296 232T251 223T193 203T147 166T126 106Z"></path><path id="MJX-7-TEX-N-65" d="M28 218Q28 273 48 318T98 391T163 433T229 448Q282 448 320 430T378 380T406 316T415 245Q415 238 408 231H126V216Q126 68 226 36Q246 30 270 30Q312 30 342 62Q359 79 369 104L379 128Q382 131 395 131H398Q415 131 415 121Q415 117 412 108Q393 53 349 21T250 -11Q155 -11 92 58T28 218ZM333 275Q322 403 238 411H236Q228 411 220 410T195 402T166 381T143 340T127 274V267H333V275Z"></path><path id="MJX-7-TEX-N-B1" d="M56 320T56 333T70 353H369V502Q369 651 371 655Q376 666 388 666Q402 666 405 654T409 596V500V353H707Q722 345 722 333Q722 320 707 313H409V40H707Q722 32 722 20T707 0H70Q56 7 56 20T70 40H369V313H70Q56 320 56 333Z"></path><path id="MJX-7-TEX-N-31" d="M213 578L200 573Q186 568 160 563T102 556H83V602H102Q149 604 189 617T245 641T273 663Q275 666 285 666Q294 666 302 660V361L303 61Q310 54 315 52T339 48T401 46H427V0H416Q395 3 257 3Q121 3 100 0H88V46H114Q136 46 152 46T177 47T193 50T201 52T207 57T213 61V578Z"></path><path id="MJX-7-TEX-N-2E" d="M78 60Q78 84 95 102T138 120Q162 120 180 104T199 61Q199 36 182 18T139 0T96 17T78 60Z"></path><path id="MJX-7-TEX-N-39" d="M352 287Q304 211 232 211Q154 211 104 270T44 396Q42 412 42 436V444Q42 537 111 606Q171 666 243 666Q245 666 249 666T257 665H261Q273 665 286 663T323 651T370 619T413 560Q456 472 456 334Q456 194 396 97Q361 41 312 10T208 -22Q147 -22 108 7T68 93T121 149Q143 149 158 135T173 96Q173 78 164 65T148 49T135 44L131 43Q131 41 138 37T164 27T206 22H212Q272 22 313 86Q352 142 352 280V287ZM244 248Q292 248 321 297T351 430Q351 508 343 542Q341 552 337 562T323 588T293 615T246 625Q208 625 181 598Q160 576 154 546T147 441Q147 358 152 329T172 282Q197 248 244 248Z"></path><path id="MJX-7-TEX-N-36" d="M42 313Q42 476 123 571T303 666Q372 666 402 630T432 550Q432 525 418 510T379 495Q356 495 341 509T326 548Q326 592 373 601Q351 623 311 626Q240 626 194 566Q147 500 147 364L148 360Q153 366 156 373Q197 433 263 433H267Q313 433 348 414Q372 400 396 374T435 317Q456 268 456 210V192Q456 169 451 149Q440 90 387 34T253 -22Q225 -22 199 -14T143 16T92 75T56 172T42 313ZM257 397Q227 397 205 380T171 335T154 278T148 216Q148 133 160 97T198 39Q222 21 251 21Q302 21 329 59Q342 77 347 104T352 209Q352 289 347 316T329 361Q302 397 257 397Z"></path><path id="MJX-7-TEX-N-D7" d="M630 29Q630 9 609 9Q604 9 587 25T493 118L389 222L284 117Q178 13 175 11Q171 9 168 9Q160 9 154 15T147 29Q147 36 161 51T255 146L359 250L255 354Q174 435 161 449T147 471Q147 480 153 485T168 490Q173 490 175 489Q178 487 284 383L389 278L493 382Q570 459 587 475T609 491Q630 491 630 471Q630 464 620 453T522 355L418 250L522 145Q606 61 618 48T630 29Z"></path><path id="MJX-7-TEX-I-1D446" d="M308 24Q367 24 416 76T466 197Q466 260 414 284Q308 311 278 321T236 341Q176 383 176 462Q176 523 208 573T273 648Q302 673 343 688T407 704H418H425Q521 704 564 640Q565 640 577 653T603 682T623 704Q624 704 627 704T632 705Q645 705 645 698T617 577T585 459T569 456Q549 456 549 465Q549 471 550 475Q550 478 551 494T553 520Q553 554 544 579T526 616T501 641Q465 662 419 662Q362 662 313 616T263 510Q263 480 278 458T319 427Q323 425 389 408T456 390Q490 379 522 342T554 242Q554 216 546 186Q541 164 528 137T492 78T426 18T332 -20Q320 -22 298 -22Q199 -22 144 33L134 44L106 13Q83 -14 78 -18T65 -22Q52 -22 52 -14Q52 -11 110 221Q112 227 130 227H143Q149 221 149 216Q149 214 148 207T144 186T142 153Q144 114 160 87T203 47T255 29T308 24Z"></path><path id="MJX-7-TEX-I-1D438" d="M492 213Q472 213 472 226Q472 230 477 250T482 285Q482 316 461 323T364 330H312Q311 328 277 192T243 52Q243 48 254 48T334 46Q428 46 458 48T518 61Q567 77 599 117T670 248Q680 270 683 272Q690 274 698 274Q718 274 718 261Q613 7 608 2Q605 0 322 0H133Q31 0 31 11Q31 13 34 25Q38 41 42 43T65 46Q92 46 125 49Q139 52 144 61Q146 66 215 342T285 622Q285 629 281 629Q273 632 228 634H197Q191 640 191 642T193 659Q197 676 203 680H757Q764 676 764 669Q764 664 751 557T737 447Q735 440 717 440H705Q698 445 698 453L701 476Q704 500 704 528Q704 558 697 578T678 609T643 625T596 632T532 634H485Q397 633 392 631Q388 629 386 622Q385 619 355 499T324 377Q347 376 372 376H398Q464 376 489 391T534 472Q538 488 540 490T557 493Q562 493 565 493T570 492T572 491T574 487T577 483L544 351Q511 218 508 216Q505 213 492 213Z"></path><path id="MJX-7-TEX-N-64" d="M376 495Q376 511 376 535T377 568Q377 613 367 624T316 637H298V660Q298 683 300 683L310 684Q320 685 339 686T376 688Q393 689 413 690T443 693T454 694H457V390Q457 84 458 81Q461 61 472 55T517 46H535V0Q533 0 459 -5T380 -11H373V44L365 37Q307 -11 235 -11Q158 -11 96 50T34 215Q34 315 97 378T244 442Q319 442 376 393V495ZM373 342Q328 405 260 405Q211 405 173 369Q146 341 139 305T131 211Q131 155 138 120T173 59Q203 26 251 26Q322 26 373 103V342Z"></path><path id="MJX-7-TEX-N-6C" d="M42 46H56Q95 46 103 60V68Q103 77 103 91T103 124T104 167T104 217T104 272T104 329Q104 366 104 407T104 482T104 542T103 586T103 603Q100 622 89 628T44 637H26V660Q26 683 28 683L38 684Q48 685 67 686T104 688Q121 689 141 690T171 693T182 694H185V379Q185 62 186 60Q190 52 198 49Q219 46 247 46H263V0H255L232 1Q209 2 183 2T145 3T107 3T57 1L34 0H26V46H42Z"></path></defs><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="scale(1,-1)"><g><g><use data-c="45" xlink:href="#MJX-7-TEX-N-45"></use><use data-c="73" xlink:href="#MJX-7-TEX-N-73" transform="translate(681,0)"></use><use data-c="74" xlink:href="#MJX-7-TEX-N-74" transform="translate(1075,0)"></use><use data-c="69" xlink:href="#MJX-7-TEX-N-69" transform="translate(1464,0)"></use><use data-c="6D" xlink:href="#MJX-7-TEX-N-6D" transform="translate(1742,0)"></use><use data-c="61" xlink:href="#MJX-7-TEX-N-61" transform="translate(2575,0)"></use><use data-c="74" xlink:href="#MJX-7-TEX-N-74" transform="translate(3075,0)"></use><use data-c="65" xlink:href="#MJX-7-TEX-N-65" transform="translate(3464,0)"></use></g><g transform="translate(4130.2,0)"><use data-c="B1" xlink:href="#MJX-7-TEX-N-B1"></use></g><g transform="translate(5130.4,0)"><use data-c="31" xlink:href="#MJX-7-TEX-N-31"></use><use data-c="2E" xlink:href="#MJX-7-TEX-N-2E" transform="translate(500,0)"></use><use data-c="39" xlink:href="#MJX-7-TEX-N-39" transform="translate(778,0)"></use><use data-c="36" xlink:href="#MJX-7-TEX-N-36" transform="translate(1278,0)"></use></g><g transform="translate(7130.7,0)"><use data-c="D7" xlink:href="#MJX-7-TEX-N-D7"></use></g><g transform="translate(8130.9,0)"><use data-c="1D446" xlink:href="#MJX-7-TEX-I-1D446"></use></g><g transform="translate(8775.9,0)"><g><use data-c="1D438" xlink:href="#MJX-7-TEX-I-1D438"></use></g><g transform="translate(771,-150) scale(0.707)" data-mjx-texclass="ORD"><g><use data-c="64" xlink:href="#MJX-7-TEX-N-64"></use><use data-c="65" xlink:href="#MJX-7-TEX-N-65" transform="translate(556,0)"></use><use data-c="6C" xlink:href="#MJX-7-TEX-N-6C" transform="translate(1000,0)"></use><use data-c="74" xlink:href="#MJX-7-TEX-N-74" transform="translate(1278,0)"></use><use data-c="61" xlink:href="#MJX-7-TEX-N-61" transform="translate(1667,0)"></use></g></g></g></g></g></svg></span>) and make your business decision safely.</p>
+</section>
 
+<section class="card">
 <h2 id="beyond-the-basics">Beyond the Basics: Advanced Topics &amp; Future Directions</h2>
 
 <p>Once you master standard A/B testing, you will inevitably run into real-world business constraints (e.g., limited engineering bandwidth, overlapping experiments, small traffic volumes, or interconnected user bases) that require specialized methodologies:</p>
@@ -441,7 +481,9 @@ th { background: #f6f8fa; }
 <li><strong>Frequentist vs. Bayesian A/B Testing:</strong> Everything in this playbook relies on <strong>Frequentist</strong> statistics, where the true conversion rate is treated as a fixed, unknown number, and we need a pre-calculated sample size (1,176 users) to compute p-values and confidence intervals. <strong>Bayesian</strong> A/B testing flips this paradigm: it blends prior historical knowledge (&ldquo;priors&rdquo;) with incoming live test data to update a probability distribution of the true conversion rate. In business, Bayesian testing is popular when traffic is low or when stakeholders want intuitive, real-time answers&mdash;allowing you to legally say, <em>&ldquo;There is an 88% probability that Treatment B is better than Control A&rdquo;</em> without falling into the frequentist semantic trap.</li>
 <li><strong>SUTVA Violations &amp; Network Effects (Interference):</strong> Standard A/B tests rely on the <strong>Stable Unit Treatment Value Assumption (SUTVA)</strong>, which strictly requires that one user&rsquo;s assignment to Treatment B has zero impact on the behavior or experience of a user in Control A. This assumption breaks down in social networks, two-sided marketplaces (like Uber or Airbnb), or collaborative B2B apps due to <strong>network effects</strong> (or spillover). In our playbook example, if a user in Treatment B discovers the new top search bar and slacks a direct link to the self-service portal to their coworker who happens to be in Control A, Control A&rsquo;s usage rate goes up artificially. This &ldquo;contaminates&rdquo; the control group, masks the true treatment effect, and usually requires advanced <strong>cluster randomization</strong> (e.g., randomizing by entire company, geography, or time window rather than individual user).</li>
 </ul>
+</section>
 
+<section class="card">
 <h2 id="appendix">Appendix: Statistical Theory and Reasoning Behind A/B Testing</h2>
 
 <h3>Binomial vs. Continuous Distributions</h3>
@@ -495,6 +537,8 @@ th { background: #f6f8fa; }
 <p>In the real world, running a single A/B test means reaching into that bucket and pulling out just one ticket at random. Because the true population parameter is invisible, we can never scratch off the ticket to see if our specific range caught the winning number. Our single ticket is strictly binary: it is either a 100% winner or a 0% loser.</p>
 
 <p>Therefore, saying &ldquo;there is a 95% chance the true parameter is inside our interval&rdquo; is technically false. Instead, we say &ldquo;we have 95% confidence&rdquo; that our interval captures the true parameter because we know the methodology we used to pull that single ticket succeeds 95 out of 100 times.</p>
+</section>
 
 <p class="foot">Part of the <a href="../../docs/index.html">Applied Data Science Lab</a> &middot; Experimentation</p>
+</div>
 </body></html>
