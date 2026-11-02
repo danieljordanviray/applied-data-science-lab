@@ -24,6 +24,11 @@ a { color: #1f6feb; }
 #noresults { display: none; color: #555; margin-top: 2em; }
 .back { margin-bottom: .4em; }
 .author { color: #888; font-size: .95em; margin: -4px 0 0; }
+
+.post { display: flex; gap: 14px; align-items: flex-start; }
+.post .thumb { width: 60px; height: 60px; border-radius: 10px; object-fit: cover; flex: none;
+               border: 1px solid #e0e4ec; box-shadow: 0 1px 3px rgba(28,28,40,.10); margin-top: 3px; }
+.post .txt { min-width: 0; }
 </style></head><body>
 <p class="back"><a href="index.html">&larr; Homepage</a></p>
 <h1>SQL (Advanced)</h1>
@@ -31,11 +36,11 @@ a { color: #1f6feb; }
 <input id="filter" type="text" placeholder="Filter topics&hellip;" aria-label="Filter topics">
 <div id="index">
 <section data-cat="sql">
-<div class="post"><a class="title" href="../sql/coalesce-nullif/coalesce-nullif.html">COALESCE and NULLIF</a><p>Tame NULLs and placeholder zeros: defaults for display, honest averages, and division without the divide-by-zero.</p></div>
-<div class="post"><a class="title" href="../sql/ctes-subqueries/ctes-subqueries.html">CTEs and Subqueries</a><p>Same question, two shapes: name your intermediate steps with WITH, or nest them inline. Readability is the difference.</p></div>
-<div class="post"><a class="title" href="../sql/date-spines/date-spines.html">Date Spines and CROSS JOINs</a><p>No row for quiet days? Build a calendar spine, cross it with your categories, and LEFT JOIN the events on — zeros included.</p></div>
-<div class="post"><a class="title" href="../sql/exists-vs-in-not-in/exists-vs-in-not-in.html">EXISTS vs IN / NOT IN</a><p>Three ways to ask ‘who has a matching row?’ — plus the NULL trap that makes NOT IN silently return nothing.</p></div>
-<div class="post"><a class="title" href="../sql/window-functions/window-functions.html">Window Functions</a><p>ROW_NUMBER, RANK, LAG/LEAD, rolling averages and running totals — per patient, per category — without collapsing rows.</p></div>
+<div class="post"><img class="thumb" src="thumb-default.svg" alt=""><div class="txt"><a class="title" href="../sql/coalesce-nullif/coalesce-nullif.html">COALESCE and NULLIF</a><p>Tame NULLs and placeholder zeros: defaults for display, honest averages, and division without the divide-by-zero.</p></div></div>
+<div class="post"><img class="thumb" src="thumb-default.svg" alt=""><div class="txt"><a class="title" href="../sql/ctes-subqueries/ctes-subqueries.html">CTEs and Subqueries</a><p>Same question, two shapes: name your intermediate steps with WITH, or nest them inline. Readability is the difference.</p></div></div>
+<div class="post"><img class="thumb" src="thumb-default.svg" alt=""><div class="txt"><a class="title" href="../sql/date-spines/date-spines.html">Date Spines and CROSS JOINs</a><p>No row for quiet days? Build a calendar spine, cross it with your categories, and LEFT JOIN the events on — zeros included.</p></div></div>
+<div class="post"><img class="thumb" src="thumb-default.svg" alt=""><div class="txt"><a class="title" href="../sql/exists-vs-in-not-in/exists-vs-in-not-in.html">EXISTS vs IN / NOT IN</a><p>Three ways to ask ‘who has a matching row?’ — plus the NULL trap that makes NOT IN silently return nothing.</p></div></div>
+<div class="post"><img class="thumb" src="thumb-default.svg" alt=""><div class="txt"><a class="title" href="../sql/window-functions/window-functions.html">Window Functions</a><p>ROW_NUMBER, RANK, LAG/LEAD, rolling averages and running totals — per patient, per category — without collapsing rows.</p></div></div>
 </section>
 </div>
 <p id="noresults">No topics match that filter.</p>
