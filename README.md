@@ -27,7 +27,7 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
   — The Practitioner's Guide to Statistical Tests: a one-page method bank (z, t,
   ANOVA, proportions, chi-squared, rank tests) with verified toy healthcare examples
 - **Causal Inference → [matching-and-propensity-scores](causal-inference/matching-and-propensity-scores/)**
-  — Matching and Propensity score Matching: The Practical Playbook:
+  — Matching and Propensity Score Matching: The Practical Playbook:
   covariate balance, Mahalanobis distance, greedy vs. optimal matching,
   calipers, Table 1 and SMDs, permutation tests, sensitivity analysis (Γ),
   and propensity scores — with interactive charts and simulations
