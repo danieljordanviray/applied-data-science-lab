@@ -1,4 +1,4 @@
-# Matching and Propensity score Matching: The Practical Playbook
+# Matching and Propensity Score Matching: The Practical Playbook
 
 [Read the playbook](matching-and-propensity-scores.html)
 
