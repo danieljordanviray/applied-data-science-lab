@@ -26,6 +26,11 @@ Rendered as pages via GitHub Pages (see `docs/` — the filterable index):
 - **Statistics & Probability → [practitioners-guide](stats-and-prob/practitioners-guide/)**
   — The Practitioner's Guide to Statistical Tests: a one-page method bank (z, t,
   ANOVA, proportions, chi-squared, rank tests) with verified toy healthcare examples
+- **Causal Inference → [matching-and-propensity-scores](causal-inference/matching-and-propensity-scores/)**
+  — Matching and Propensity score Matching: The Practical Playbook:
+  covariate balance, Mahalanobis distance, greedy vs. optimal matching,
+  calipers, Table 1 and SMDs, permutation tests, sensitivity analysis (Γ),
+  and propensity scores — with interactive charts and simulations
 - **Causal Inference → [difference-in-differences](causal-inference/difference-in-differences/)**
   — Difference-in-Differences, plus the staggered-timing version
 - **SQL (Advanced) → [sql](sql/)** — EXISTS vs IN/NOT IN, COALESCE/NULLIF, window functions,
