@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light" />
+<link rel="icon" href="data:," />
+<title>Matching and Propensity score Matching: The Practical Playbook</title>
+<meta name="description" content="A practical, first-principles playbook for matching and propensity score matching in observational studies: balance, distance, calipers, outcome analysis, sensitivity analysis, and propensity scores — built around one diabetes example." />
+<meta name="author" content="Daniel Jordan Viray" />
+<meta property="article:author" content="Daniel Jordan Viray" />
+<meta property="article:published_time" content="2026-11-02T12:00:00-05:00" />
+<meta property="og:title" content="Matching and Propensity score Matching: The Practical Playbook" />
+<meta property="og:description" content="How to rebuild a fair comparison from observational data: matching, balance, calipers, permutation tests, sensitivity analysis, and propensity scores, step by step." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danieljordanviray.github.io/applied-data-science-lab/causal-inference/matching-and-propensity-scores/matching-and-propensity-scores.html" />
+<meta property="og:image" content="https://danieljordanviray.github.io/applied-data-science-lab/causal-inference/matching-and-propensity-scores/og-image.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Matching and Propensity score Matching: The Practical Playbook" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Matching and Propensity score Matching: The Practical Playbook" />
+<meta name="twitter:description" content="How to rebuild a fair comparison from observational data: matching, balance, calipers, permutation tests, sensitivity analysis, and propensity scores, step by step." />
+<meta name="twitter:image" content="https://danieljordanviray.github.io/applied-data-science-lab/causal-inference/matching-and-propensity-scores/og-image.jpg" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting",
+ "headline":"Matching and Propensity score Matching: The Practical Playbook",
+ "description":"A practical, first-principles playbook for matching and propensity score matching in observational studies.",
+ "image":"https://danieljordanviray.github.io/applied-data-science-lab/causal-inference/matching-and-propensity-scores/og-image.jpg",
+ "datePublished":"2026-11-02T12:00:00-05:00",
+ "author":{"@type":"Person","name":"Daniel Jordan Viray","url":"https://danieljordanviray.com","sameAs":["https://www.linkedin.com/in/danieljordanviray","https://github.com/danieljordanviray"]}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#f6f6f3; --panel:#ffffff; --panel2:#efefea; --ink:#1c2430; --ink2:#4c5866;
+  --line:#d9d9d2; --accent:#0e7569; --accent-soft:#e2efec;
+  --treat:#b4552d; --treat-soft:#f9ece6; --control:#3d6db5; --control-soft:#e7eef7;
+  --bad:#b3372a; --bad-soft:#f9e9e6; --good:#0e7569; --amber:#9a6a12; --amber-soft:#f7efdb;
+  --term:#2f5d8a; --shadow:0 1px 2px rgba(20,25,35,.06),0 8px 24px rgba(20,25,35,.06);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;font-size:16.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding:28px 20px 90px}
+h1,h2,h3{font-family:"Spectral",Georgia,serif;line-height:1.2;margin:0}
+h1{font-size:clamp(30px,5.4vw,44px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:clamp(23px,3.6vw,29px);font-weight:700;margin-bottom:6px}
+h3{font-size:20px;font-weight:700;margin:22px 0 4px}
+p{margin:10px 0}
+.date{font-size:15.5px;color:var(--ink2);margin-top:10px}
+.author-line{font-size:14.5px;color:var(--ink2);margin-top:2px}
+.lede{font-size:18.5px;color:var(--ink2);margin-top:14px}
+.lede strong{color:var(--ink)}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+section{margin-top:52px;scroll-margin-top:18px}
+.sec-head{display:flex;gap:14px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:14px}
+.sec-num{font-family:"IBM Plex Mono",monospace;font-size:14px;color:var(--accent);font-weight:600;white-space:nowrap}
+.fmt{font-family:"IBM Plex Mono",monospace;font-size:.86em;color:var(--term);font-weight:500}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;box-shadow:var(--shadow);margin:16px 0}
+.prove{border:1.5px dashed var(--accent);background:var(--accent-soft);border-radius:10px;padding:16px 20px;margin:18px 0}
+.prove .tag,.warn .tag,.note .tag{font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:6px}
+.prove .tag{color:var(--accent)}
+.warn{background:var(--bad-soft);border:1px solid var(--bad);border-radius:10px;padding:16px 20px;margin:18px 0}
+.warn .tag{color:var(--bad)}
+.note{background:var(--amber-soft);border:1px solid #e0cf9e;border-radius:10px;padding:16px 20px;margin:18px 0}
+.note .tag{color:var(--amber)}
+.callout{background:var(--panel);border-left:4px solid var(--accent);border-radius:0 10px 10px 0;padding:18px 22px;box-shadow:var(--shadow);font-size:17.5px;line-height:1.65;margin:16px 0}
+.formula{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 20px;box-shadow:var(--shadow);margin:16px 0;text-align:center}
+.formula .f{font-family:"Spectral",Georgia,serif;font-size:21px;font-weight:600;letter-spacing:.01em;overflow-x:auto;white-space:nowrap;padding:4px 0}
+.formula .fdesc{font-size:14.5px;color:var(--ink2);text-align:left;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:10px 0}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{font-weight:600;color:var(--ink2);font-size:12.5px;letter-spacing:.04em;text-transform:uppercase}
+td:first-child,th:first-child{text-align:left}
+td.c,th.c{text-align:center}
+tr.hlrow td{background:var(--accent-soft);font-weight:600}
+.scrollx{overflow-x:auto}
+.figcap{font-size:13.5px;color:var(--ink2);margin-top:8px}
+svg{display:block;width:100%;height:auto}
+.toc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 22px;box-shadow:var(--shadow);margin:22px 0}
+.toc h2{font-size:19px;margin-bottom:8px}
+.toc ol{margin:6px 0 2px;padding-left:22px}
+.toc li{margin:5px 0}
+.toc a{color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--accent)}
+.toc a:hover{color:var(--accent)}
+.btn{font-family:"IBM Plex Sans",sans-serif;font-size:14.5px;font-weight:600;border:1.5px solid var(--accent);background:var(--panel);color:var(--accent);border-radius:999px;padding:7px 16px;cursor:pointer;margin:4px 4px 4px 0}
+.btn.on{background:var(--accent);color:#fff}
+.btn:hover{opacity:.88}
+input[type=range]{width:100%;accent-color:var(--accent);margin:10px 0}
+.readout{font-family:"IBM Plex Mono",monospace;font-size:14.5px;background:var(--panel2);border-radius:8px;padding:10px 14px;margin-top:10px}
+.legend{font-size:13.5px;color:var(--ink2);margin-top:6px}
+.swatch{width:18px;height:4px;border-radius:2px;display:inline-block;vertical-align:middle;margin-right:6px}
+code{font-family:"IBM Plex Mono",monospace;font-size:.88em;background:var(--panel2);padding:1px 5px;border-radius:4px}
+pre{background:#1c2430;color:#eef2f0;border-radius:10px;padding:16px 18px;overflow-x:auto;font-size:13.5px;line-height:1.55}
+pre code{background:none;padding:0;color:inherit}
+ul,ol{margin:8px 0;padding-left:24px}
+li{margin:5px 0}
+.checklist li{margin:9px 0}
+footer{margin-top:64px;border-top:1px solid var(--line);padding-top:16px;font-size:13.5px;color:var(--ink2)}
+a{color:var(--accent)}
+.small{font-size:14px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<div style="max-width:880px;margin:0 auto;padding:18px 20px 0;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:.92rem;"><a href="../../docs/index.html" style="color:#0e7569;text-decoration:none;">&larr; Homepage</a></div>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Applied Data Science Lab · Causal Inference</div>
+  <h1>Matching and Propensity score Matching: The Practical Playbook</h1>
+  <div class="date">November 2, 2026</div>
+  <div class="author-line">Author: Daniel Jordan Viray</div>
+  <p class="lede">You can't always run an experiment. Sometimes the data already exists, the treatment was already chosen — usually for a reason — and your job is to rebuild a <strong>fair comparison</strong> out of it. That's what matching does. This playbook walks through the whole job, step by step: spotting imbalance, measuring how different two patients are, finding good matches, checking that it worked, analyzing the outcome, and stress-testing the result — then doing the same thing, faster, with <strong>propensity scores</strong>.</p>
+  <p class="lede">One running example carries the whole post: diabetes patients who were prescribed either metformin, the standard older drug, or an SGLT2 inhibitor, the newer drug. Nobody flipped a coin. Doctors chose — and that choice is exactly the problem we have to solve.</p>
+</header>
+
+<nav class="toc" aria-label="Table of contents">
+  <h2>Contents — click to jump</h2>
+  <ol>
+    <li><a href="#why">Why matching? When you can't run a trial</a></li>
+    <li><a href="#one-covariate">One covariate: imbalance, buckets, and a first match</a></li>
+    <li><a href="#many-covariates">Many covariates, fine balance, and who the effect is for</a></li>
+    <li><a href="#how-many">How many matches? The bias–variance trade-off</a></li>
+    <li><a href="#distance">Measuring distance between patients</a></li>
+    <li><a href="#algorithms">Finding the matches: greedy, optimal, and calipers</a></li>
+    <li><a href="#balance">Did it work? Checking balance</a></li>
+    <li><a href="#outcomes">Analyzing the outcome after matching</a></li>
+    <li><a href="#sensitivity">What matching can't fix: sensitivity analysis</a></li>
+    <li><a href="#propensity">Propensity scores: one number instead of many covariates</a></li>
+    <li><a href="#psm">Propensity score matching in practice</a></li>
+    <li><a href="#checklist">The playbook, on one page</a></li>
+  </ol>
+</nav>
+
+<section id="why">
+  <div class="sec-head"><span class="sec-num">01</span><h2>Why matching? When you can't run a trial</h2></div>
+  <p>The motivating factor for matching is that we can't always do a randomized controlled trial [randomized controlled trial, RCT]. Trials can be expensive, and sometimes they're unethical. If you want to understand the effect of smoking on lung cancer, you can't really ask people to smoke.</p>
+  <p>So instead we work with data that already exists. The treatment was already given, the outcomes already happened, and we're observing what took place. That's an <span class="fmt">[observational study]</span>. Matching is how we build a treatment group and a control group out of that existing data — essentially, we try to recreate the fair comparison a trial would have given us.</p>
+  <h3>The problem: the groups start out different</h3>
+  <p>In a trial, random assignment doesn't control any patient's characteristics directly — it makes the <em>distributions</em> of background characteristics [covariates] the same in both groups, on average [in expectation]. A background characteristic that differs between the groups <em>and</em> affects the outcome is a <span class="fmt">[confounder]</span>, and it's what makes a raw comparison misleading.</p>
+  <p>In our diabetes example, look at baseline HbA1c — a measure of blood sugar over the past few months, taken <em>before</em> treatment. Patients on the newer SGLT2 drug tend to have higher baseline HbA1c than patients on metformin. Why? Because doctors tend to prescribe the newer drug to patients whose diabetes is more severe or less controlled. So if the SGLT2 group ends the study with higher HbA1c, is that the drug failing — or did that group simply start out sicker? With the raw data, you can't tell.</p>
+
+  <div class="card">
+    <div>
+      <button class="btn on" id="btn-before" type="button">Before matching</button>
+      <button class="btn" id="btn-after" type="button">After matching</button>
+    </div>
+    <svg id="hba1c-chart" viewBox="0 0 760 300" role="img" aria-label="Two bell curves showing the distribution of baseline HbA1c in the treatment and control groups"></svg>
+    <div class="legend"><span class="swatch" style="background:#b4552d"></span>Treatment (SGLT2 inhibitor) &nbsp; <span class="swatch" style="background:#3d6db5"></span>Control (metformin)</div>
+    <p class="figcap" id="hba1c-cap"><strong>Before matching:</strong> the treatment group's baseline HbA1c is shifted to the right — they started out sicker (mean 8.9% vs. 8.1%). Toggle to <em>After matching</em> to see the goal: the two distributions sit almost on top of each other (mean 8.8% vs. 8.75%). Illustrative distributions built from the Table 1 values in Section 7.</p>
+  </div>
+
+  <p>The whole point of matching is to fix that: to control for the covariate when all we have is observational data — to get <span class="fmt">[covariate balance]</span>.</p>
+  <p>We do it by pairing each patient in the treatment group with a similar patient in the control group, and — this part matters — we do the matching <em>before looking at the outcomes</em>. We're blind to the outcomes while we build the groups, just like a trial is set up before anyone's outcome is known.</p>
+  <div class="note"><span class="tag">When there's simply nobody to match</span>
+    <p style="margin:4px 0">Sometimes the matching process reveals that a treated patient has <em>no</em> similar patient in the control group. That patient has to be excluded — we can only include treated patients who plausibly could have been in the control group. The range of patients where both groups actually exist is called the <span class="fmt">[common support]</span>, and dropping patients outside it quietly changes <em>who</em> your answer applies to. Keep count of who you drop, and say so when you report results.</p>
+  </div>
+</section>
+
+<section id="one-covariate">
+  <div class="sec-head"><span class="sec-num">02</span><h2>One covariate: imbalance, buckets, and a first match</h2></div>
+  <p>Start simple, with a single covariate: baseline HbA1c. The problem that can occur is <span class="fmt">[covariate imbalance]</span> — the distribution of the covariate we're trying to control for differs between the treatment and control groups.</p>
+  <p>A binary example makes it easiest to see. Suppose 80% of the treatment group are smokers and only 10% of the control group are. That's a big imbalance — and if smoking affects the outcome, a naive comparison of the groups mostly compares smokers to non-smokers, not drug to drug.</p>
+  <p>HbA1c is continuous, so to check its balance the same way, we bucket it into groups:</p>
+  <div class="card"><table>
+    <tr><th>Baseline HbA1c group</th><th class="c">Range</th><th>Treatment share (example)</th></tr>
+    <tr><td>Mild</td><td class="c">7.0% – 7.9%</td><td>30%</td></tr>
+    <tr><td>Moderate</td><td class="c">8.0% – 8.9%</td><td>40%</td></tr>
+    <tr><td>Severe</td><td class="c">9.0% and above</td><td>30%</td></tr>
+  </table>
+  <p class="figcap">Bucketing a continuous covariate turns “are the distributions similar?” into a simple comparison of shares, group by group.</p></div>
+  <p>Now matching, in its simplest form: every patient in the treatment group gets a match from the control group with the same (or very similar) value of the covariate. Control patients who aren't matched are discarded from the analysis. If the treatment group is 30% mild, 40% moderate, 30% severe, the matched control group is built to be 30 / 40 / 30 as well. The covariate is now balanced — by construction.</p>
+</section>
+
+<section id="many-covariates">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Many covariates, fine balance, and who the effect is for</h2></div>
+  <p>In reality there won't be one covariate to balance — there will be many. And there probably won't be a perfect control match for every treated patient. The idea is to get close enough that the <em>distributions</em> of the covariates are balanced between the groups, the way they would be in a trial.</p>
+  <p>Notice what a trial gives you, because it's the target: not identical patients, but groups that look the same as a whole. That's <span class="fmt">[stochastic balance]</span> — the distributions (means, spreads, shapes) of the covariates are the same across the two groups, in expectation. You aren't matching clones; you're making the groups, in aggregate, statistically alike. In any one realized trial — or any one matched sample — small differences remain just by chance. Balance is a property we're aiming at, not a guarantee.</p>
+  <p>For example, say we also want to control for age. Now each treated patient needs a control patient who matches on HbA1c severity <em>and</em> is close in age — say, within ±3 years. That “within this much, and no more” rule is a <span class="fmt">[caliper]</span>, and we'll come back to calipers in Section 6.</p>
+
+  <h3>Who is the effect for? The treated, usually</h3>
+  <p>Look at what we just did: we took the treated group as given, and we built a control group that looks like <em>them</em>. So the combined matched sample has the covariate distribution of the <em>treated</em> group — and the effect we estimate is the effect of treatment <em>on the treated</em>:</p>
+  <div class="formula">
+    <div class="f">ATT&nbsp;=&nbsp;E[ Y(1) − Y(0) &nbsp;|&nbsp; A = 1 ]</div>
+    <div class="fdesc"><strong>How to read it:</strong> for patients who actually got the treatment [A = 1], what's the average difference between the outcome they had on treatment [Y(1)] and the outcome they <em>would have had</em> without it [Y(0)]? The matched control patients stand in for that unobservable “would have had.” ATT is short for <span class="fmt">[average treatment effect on the treated]</span>.</div>
+  </div>
+  <p>That's different from the effect averaged over the <em>entire</em> population, treated and untreated alike — the <span class="fmt">[average treatment effect, ATE]</span>. It's possible to match in a way that targets the ATE, but it's more involved and out of scope here. Most of the time in matching, we're estimating the ATT.</p>
+  <div class="note"><span class="tag">The assumption doing the heavy lifting</span>
+    <p style="margin:4px 0">Matching only balances the covariates you <em>measured</em>. The claim that matching those is <em>enough</em> — that, once we condition on the measured covariates, treatment is as good as randomly assigned — is the <span class="fmt">[ignorability / no unmeasured confounding assumption]</span>. It's an assumption, not something the data can prove. Section 9 is about stress-testing it.</p>
+  </div>
+
+  <h3>Fine balance: exact as a group, without exact pairs</h3>
+  <p>Sometimes you can't get an exact match for each individual patient — but you can still get the group distributions exactly right. That's <span class="fmt">[fine balance]</span>.</p>
+  <p>Consider four patients, controlling for HbA1c severity, smoking status, and age. We insist on an exact match on HbA1c severity. Patient 1 (treated) is severe, a smoker, age 40 — but the only severe control patient, Patient 2, is a non-smoker, age 25. Patient 4 is a smoker, age 40, like Patient 1 — but Patient 4's HbA1c is mild, so that pairing breaks our exact-severity rule. Patient 3 (treated) has the mirror-image problem.</p>
+  <div class="card"><div class="scrollx"><table>
+    <tr><th>Patient</th><th>Pair</th><th>Group</th><th>HbA1c severity</th><th>Smoking</th><th>Age</th></tr>
+    <tr><td>1</td><td class="c">Match 1</td><td style="text-align:left">Treatment (SGLT2)</td><td>Severe (10.5%)</td><td class="c">Smoker</td><td>40</td></tr>
+    <tr><td>2</td><td class="c">Match 1</td><td style="text-align:left">Control (metformin)</td><td>Severe (10.5%)</td><td class="c">Non-smoker</td><td>25</td></tr>
+    <tr><td>3</td><td class="c">Match 2</td><td style="text-align:left">Treatment (SGLT2)</td><td>Mild (7.2%)</td><td class="c">Non-smoker</td><td>25</td></tr>
+    <tr><td>4</td><td class="c">Match 2</td><td style="text-align:left">Control (metformin)</td><td>Mild (7.2%)</td><td class="c">Smoker</td><td>40</td></tr>
+  </table></div>
+  <p class="figcap">Neither pair matches exactly on smoking or age. Now look at the two groups as a whole.</p></div>
+  <p>Match 1 with 2, and 3 with 4. Neither pair is an exact match — but in aggregate, both groups are identical on every covariate:</p>
+  <div class="card"><table>
+    <tr><th>Share of group</th><th>Treatment (Patients 1 &amp; 3)</th><th>Control (Patients 2 &amp; 4)</th></tr>
+    <tr><td>Severe / Mild HbA1c</td><td>50% / 50%</td><td>50% / 50%</td></tr>
+    <tr><td>Smoker / Non-smoker</td><td>50% / 50%</td><td>50% / 50%</td></tr>
+    <tr><td>Age 40 / Age 25</td><td>50% / 50%</td><td>50% / 50%</td></tr>
+  </table></div>
+  <p>This is the statistical heart of the example: perfect balance on the <span class="fmt">[marginal distributions]</span> — the overall percentage of smokers, of severe cases, of 40-year-olds in each group — while relaxing the <span class="fmt">[joint distribution]</span>: no single pair is simultaneously Severe <em>and</em> Smoker <em>and</em> 40. Various statistical packages will construct a fine balance for you automatically.</p>
+</section>
+
+<section id="how-many">
+  <div class="sec-head"><span class="sec-num">04</span><h2>How many matches? The bias–variance trade-off</h2></div>
+  <p>Three common shapes:</p>
+  <ul>
+    <li><strong>One-to-one matching</strong> — each treated patient gets one similar control patient. Treated patients with no suitable match are discarded.</li>
+    <li><strong>Many-to-one matching</strong> — each treated patient gets <em>k</em> similar control patients (for example, 1-to-3).</li>
+    <li><strong>Variable-ratio matching</strong> — each treated patient gets as many good control matches as can be found, and that number varies from patient to patient.</li>
+  </ul>
+  <p>Choosing between them is a <span class="fmt">[bias–variance trade-off]</span>. The easiest way to feel it is <em>picky quality vs. sample size</em>.</p>
+  <p>Imagine 100 treated patients on the new drug and a big pool of 2,000 control patients on the old one. You're shopping in that pool to build a comparison group. Take one treated patient whose baseline HbA1c is 9.50%:</p>
+  <div class="card"><table>
+    <tr><th>Match</th><th>Control's baseline HbA1c</th><th>Gap from 9.50%</th></tr>
+    <tr class="hlrow"><td>1st closest</td><td>9.50%</td><td>0.00</td></tr>
+    <tr><td>2nd closest</td><td>9.45%</td><td>0.05</td></tr>
+    <tr><td>3rd closest</td><td>9.35%</td><td>0.15</td></tr>
+    <tr><td>4th closest</td><td>9.20%</td><td>0.30</td></tr>
+    <tr><td>5th closest</td><td>9.05%</td><td>0.45</td></tr>
+  </table>
+  <p class="figcap">Average of all five controls: 9.31% — a 0.19-point gap from the treated patient's 9.50%. That gap is leftover confounding [residual bias] sneaking back in.</p></div>
+  <p><strong>1-to-1 matching: low bias, high variance.</strong> You only need the single best twin in the pool of 2,000, so the baseline difference is basically zero — almost no confounding bias. But you keep only 100 controls and discard 1,900. If that one matched control happens to be a fluke — they caught a bad flu, started an extreme diet — that noise lands at full weight on your estimate. Small sample, wider standard errors: high variance.</p>
+  <p><strong>Many-to-1 matching: higher bias, lower variance.</strong> Use 5 controls per treated patient and you keep 500 controls instead of 100. Individual flukes average out and confidence intervals shrink. But matches 3, 4, and 5 are progressively worse — in a pool with more mild patients than severe ones, reaching deeper means grabbing healthier and healthier controls, and the bias that matching was supposed to remove creeps back.</p>
+  <div class="card">
+    <label for="k-slider"><strong>Try it:</strong> matches per treated patient (k)</label>
+    <input type="range" id="k-slider" min="1" max="5" step="1" value="1" />
+    <svg id="bv-chart" viewBox="0 0 760 190" role="img" aria-label="Bar chart comparing average matched-control HbA1c gap and relative standard error as the number of matches changes"></svg>
+    <div class="readout" id="bv-readout"></div>
+    <p class="figcap">Built directly from the five matches in the table above. The bias bar is the gap between 9.50% and the average HbA1c of the k controls used. The variance bar is relative: standard error shrinks roughly like 1/√k as the control group grows. It is an illustration of the shape of the trade-off, not a calculation for a real dataset.</p>
+  </div>
+</section>
+
+<section id="distance">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Measuring distance between patients</h2></div>
+  <p>To match, we first have to quantify how far apart each treated patient is from every control patient. The standard tool is a formula called the <span class="fmt">[Mahalanobis distance]</span>:</p>
+  <div class="formula">
+    <div class="f">D<sub>ij</sub> = √[ (x<sub>i</sub> − x<sub>j</sub>)<sup>T</sup> S<sup>−1</sup> (x<sub>i</sub> − x<sub>j</sub>) ]</div>
+    <div class="fdesc"><strong>How to read it, piece by piece:</strong> x<sub>i</sub> and x<sub>j</sub> are the two patients, each written as a list [vector] of all their covariate values. (x<sub>i</sub> − x<sub>j</sub>) is just the difference on every covariate. S is the <span class="fmt">[covariance matrix]</span> of the covariates — it records how spread out each covariate is and how they move together — and S<sup>−1</sup> is what does the rescaling. In plain terms: <strong>a difference of 1 point only counts as “big” if patients normally differ by much less than that.</strong> A 1-point HbA1c gap is large; a 1-year age gap is nothing. Mahalanobis distance puts every covariate on a fair, spread-adjusted scale, and it also avoids double-counting two covariates that basically measure the same thing [correlation]. You don't compute this by hand — software does — but that's what it's doing.</div>
+  </div>
+  <div class="prove"><span class="tag">Prove it — a tiny hand-check</span>
+    <p style="margin:4px 0">Suppose, just to keep the arithmetic friendly, that HbA1c and age are uncorrelated, with standard deviations of 1.3 points and 10 years. Then Mahalanobis distance is simply the distance between the <em>standardized</em> differences. Patient A is (HbA1c 9.5, age 60).</p>
+    <ul style="margin:4px 0">
+      <li>Patient B is (8.2, 50): standardized differences are 1.3/1.3 = 1.0 and 10/10 = 1.0, so D = √(1² + 1²) = <strong>1.41</strong>.</li>
+      <li>Patient C is (9.5, 40): standardized differences are 0 and 20/10 = 2.0, so D = √(0² + 2²) = <strong>2.00</strong>.</li>
+    </ul>
+    <p style="margin:4px 0">So B is the closer match for A — even though C matches A exactly on HbA1c — because a 20-year age gap is two standard deviations, and that outweighs B's one-standard-deviation gap on each of two covariates. Raw, unscaled distances would have called the 20-year gap and the 1.3-point gap incomparable — which is exactly the problem the scaling solves.</p>
+  </div>
+  <p>One variation worth knowing: the <span class="fmt">[robust Mahalanobis distance]</span> computes the distance from the <em>ranks</em> of the covariates instead of their raw values. The motivation is outliers: one extreme patient shouldn't be able to stretch the scale and distort everyone else's distances. Ranks cap how much any single value can pull.</p>
+  <h3>Exact matches on the covariates you refuse to compromise on</h3>
+  <p>If some covariates must match <em>exactly</em> — say, HbA1c severity group — there's a neat trick. Compute all the distances as usual, then add a rule: if two patients differ at all on a must-match covariate, set their distance to infinity. Those pairs will now never be chosen, whatever their other covariates look like. Exactness enforced by arithmetic.</p>
+</section>
+
+<section id="algorithms">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Finding the matches: greedy, optimal, and calipers</h2></div>
+  <p>Now that we have a distance between every treated patient and every control patient, we need an algorithm to actually pick the pairs. There are two families — greedy and optimal — and, in the real world, the control pool is usually much larger than the treatment group, which is what makes either of them feasible.</p>
+  <h3>Greedy (nearest-neighbor) matching</h3>
+  <ol>
+    <li>Randomly order the treated patients.</li>
+    <li>Go down the list. For each treated patient, pick the control patient with the smallest distance.</li>
+    <li>Once a control patient is used, remove them from the pool so they can't be matched again [matching without replacement].</li>
+  </ol>
+  <p>For many-to-one matching, the same idea repeats: cycle through the treated list again to find each patient's second match, and so on — though software implementations differ in the details, so check your package's documentation for exactly what it does. In R, <code>MatchIt</code> is the standard package here.</p>
+  <p>The benefits: it's fast [computationally efficient] and easy to understand. The drawback: the order you process the treated patients in <em>matters</em>. Each individual pick is the best available at that moment, but taken together the pairs may not minimize the <em>total</em> distance across all matches — early patients can grab controls that would have been a much better fit for someone later, and late patients can be left with poor matches. Greedy is not <span class="fmt">[globally optimal]</span>.</p>
+  <h3>Calipers: a maximum distance you'll tolerate</h3>
+  <p>A <span class="fmt">[caliper]</span> is a threshold: a maximum distance beyond which you refuse to match, full stop. During matching, if a treated patient's closest available control is farther away than the caliper, that treated patient is discarded rather than badly matched.</p>
+  <p>Calipers also help enforce the <span class="fmt">[positivity assumption]</span>: every patient pattern in the study needs a genuine, non-zero chance of appearing in <em>either</em> group — formally, 0 &lt; P(A = a | X) &lt; 1 for every treatment value a (a = 0 and a = 1). For our binary treatment that's exactly the same statement as 0 &lt; P(A = 1 | X) &lt; 1, because the chance of being a control is whatever is left over: P(A = 0 | X) = 1 − P(A = 1 | X), so if the treatment chance sits strictly between 0 and 1, the control chance automatically does too. A treated patient with no control patient anywhere nearby is a warning sign that patients like them essentially never appear in the control group — that they had close to a zero chance of being there. The caliper turns that warning sign into an exclusion rule.</p>
+  <h3>Optimal matching</h3>
+  <p>Optimal matching flips the priority. Any individual treated patient might <em>not</em> get their single best control — but the sum of the distances across <em>all</em> matches, taken together, is as small as it can possibly be [globally minimized].</p>
+  <p>The cost is computation: in principle, the algorithm has to weigh combinations of pairings, and the size of the problem grows with the number of <em>possible</em> pairings — treated × control:</p>
+  <div class="card"><table>
+    <tr><th>Possible pairings</th><th>Example</th><th>Practical verdict</th></tr>
+    <tr><td>100,000</td><td style="text-align:left">100 treated × 1,000 controls</td><td>Likely feasible</td></tr>
+    <tr><td>1,000,000</td><td style="text-align:left">1,000 treated × 1,000 controls</td><td>May take a while — still feasible</td></tr>
+    <tr><td>1,000,000,000</td><td style="text-align:left">100,000 treated × 10,000 controls</td><td>Probably not feasible</td></tr>
+  </table>
+  <p class="figcap">Rules of thumb, not hard limits — real feasibility depends on the algorithm, the sparsity of the problem, and your machine. In R, the packages are <code>optmatch</code> and <code>rcbalance</code>.</p></div>
+  <h3>Sparse optimal matching: split the problem</h3>
+  <p>A practical compromise: split the dataset into subgroups — by region, by condition, by any variable it's sensible to match within — and run optimal matching inside each subgroup. With 10 roughly equal regions, the number of candidate pairings falls to about a tenth of the original problem (each region holds roughly 1/100 of the pairings, and there are 10 of them), and because the algorithm's runtime grows faster than the number of pairings, the time saving is even bigger than that. Smaller problems, same global-optimality idea inside each block.</p>
+</section>
+
+<section id="balance">
+  <div class="sec-head"><span class="sec-num">07</span><h2>Did it work? Checking balance</h2></div>
+  <p>Matching is a claim — “the groups are now comparable” — and balance checking is how you show your work. The standard display is <strong>Table 1</strong>: the table (usually the first in a study, hence the name) that compares the covariate distributions of the two groups <em>before</em> and <em>after</em> matching.</p>
+  <p>Here is a Table 1 for our diabetes example. Read it across: before matching, the groups differ a lot — especially on baseline HbA1c, the very variable doctors used to choose the drug. After 1-to-1 matching, 212 of the 240 treated patients found a match (28 had no comparable control and were dropped — remember Section 1: say who was dropped), and every difference shrinks to near zero.</p>
+  <div class="card"><div class="scrollx"><table>
+    <tr><th>Covariate</th><th colspan="3">Before matching</th><th colspan="3">After matching</th></tr>
+    <tr><th></th><th>Treated (n=240)</th><th>Control (n=960)</th><th>|SMD|</th><th>Treated (n=212)</th><th>Control (n=212)</th><th>|SMD|</th></tr>
+    <tr><td>Age, years — mean (SD)</td><td>58.4 (10.2)</td><td>54.9 (11.0)</td><td>0.33</td><td>57.9 (10.4)</td><td>57.6 (10.6)</td><td>0.03</td></tr>
+    <tr><td>Baseline HbA1c, % — mean (SD)</td><td>8.9 (1.3)</td><td>8.1 (1.2)</td><td>0.64</td><td>8.8 (1.25)</td><td>8.75 (1.22)</td><td>0.04</td></tr>
+    <tr><td>BMI — mean (SD)</td><td>32.4 (5.8)</td><td>30.1 (5.4)</td><td>0.41</td><td>32.1 (5.6)</td><td>31.9 (5.5)</td><td>0.04</td></tr>
+    <tr><td>Smoker — %</td><td>34%</td><td>19%</td><td>0.35</td><td>32%</td><td>31%</td><td>0.02</td></tr>
+    <tr><td>Male — %</td><td>52%</td><td>47%</td><td>0.10</td><td>51%</td><td>50%</td><td>0.02</td></tr>
+    <tr><td>Severe baseline HbA1c (≥ 9%) — %</td><td>46%</td><td>22%</td><td>0.52</td><td>43%</td><td>42%</td><td>0.02</td></tr>
+  </table></div>
+  <p class="figcap">Illustrative Table 1 constructed for this example. Every SMD shown is the value the formula below produces from the means, SDs, and percentages in its row — check one by hand if you like (the prove-it box shows you how).</p></div>
+
+  <h3>The standardized mean difference</h3>
+  <p>The comparison number in each row is the <span class="fmt">[standardized mean difference, SMD]</span>: the difference between the two groups' means, divided by a pooled standard deviation, so the result is in “standard deviation units” and comparable across covariates measured on completely different scales.</p>
+  <div class="formula">
+    <div class="f">SMD = ( x̄<sub>treated</sub> − x̄<sub>control</sub> ) / √[ ( s<sub>treated</sub>² + s<sub>control</sub>² ) / 2 ]</div>
+    <div class="fdesc">For a yes/no covariate [binary], the same idea uses proportions: SMD = (p<sub>treated</sub> − p<sub>control</sub>) / √[ ( p<sub>treated</sub>(1−p<sub>treated</sub>) + p<sub>control</sub>(1−p<sub>control</sub>) ) / 2 ]. Report the absolute value, |SMD|, when all you care about is the <em>size</em> of the imbalance.</div>
+  </div>
+  <div class="prove"><span class="tag">Prove it — check the HbA1c row</span>
+    <p style="margin:4px 0">Before matching: (8.9 − 8.1) / √[(1.3² + 1.2²)/2] = 0.8 / √[(1.69 + 1.44)/2] = 0.8 / √1.565 = 0.8 / 1.251 ≈ <strong>0.64</strong>. ✓ &nbsp;After matching: (8.8 − 8.75) / √[(1.25² + 1.22²)/2] ≈ 0.05 / 1.235 ≈ <strong>0.04</strong>. ✓</p>
+  </div>
+  <p><strong>How to read an SMD</strong> — the widely used rule of thumb:</p>
+  <ul>
+    <li><strong>|SMD| below 0.1</strong> — generally taken as adequate balance. Smaller is better, and for a covariate you believe is a strong confounder, you may want to do better than 0.1.</li>
+    <li><strong>|SMD| around 0.1 to 0.2</strong> — some imbalance remains; look at it, and consider re-matching (a caliper, a different distance, exact constraints) before proceeding.</li>
+    <li><strong>|SMD| above 0.2</strong> — clear imbalance. Don't analyze yet; fix the matching first.</li>
+  </ul>
+  <p class="small">There is nothing magic about 0.1 — it's a convention, not a cliff edge. The point of the scale is that it means the same thing for age in years, HbA1c in percent, and smoking as a percentage.</p>
+
+  <h3>The same picture, as a graph: the Love plot</h3>
+  <div class="card">
+    <svg id="love-chart" viewBox="0 0 760 300" role="img" aria-label="Love plot showing standardized mean differences for each covariate before and after matching"></svg>
+    <div class="legend"><span class="swatch" style="background:#b3372a"></span>Before matching &nbsp; <span class="swatch" style="background:#0e7569"></span>After matching &nbsp; Dashed line = |SMD| 0.1</div>
+    <p class="figcap">A <span class="fmt">[Love plot]</span> (named for biostatistician Thomas Love) puts every covariate's |SMD| on one chart. Before matching, several covariates sit far to the right of the 0.1 line. After matching, every dot hugs zero. If a covariate is still out past the line, that's your to-do list for re-matching — you can see it at a glance, no table required.</p>
+  </div>
+
+  <h3>Why not just run a t-test on each covariate?</h3>
+  <p>You could test each covariate for a “statistically significant difference” — but significance answers the wrong question here, because a p-value mixes together <em>how big</em> a difference is with <em>how much data</em> you have. Put the two formulas side by side and the difference is visible:</p>
+  <div class="formula">
+    <div class="f">SMD = ( x̄<sub>1</sub> − x̄<sub>0</sub> ) / s<sub>pooled</sub> &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; t = ( x̄<sub>1</sub> − x̄<sub>0</sub> ) / ( s<sub>pooled</sub> × √(1/n<sub>1</sub> + 1/n<sub>0</sub>) )</div>
+    <div class="fdesc">The SMD divides by the <strong>standard deviation</strong> — the natural spread of the values from person to person, which stays roughly the same whether you sample 200 patients or 200,000. There is no sample size anywhere in the formula. The t-statistic divides by the <strong>standard error</strong>, which contains n — and shrinks toward zero as n grows. So with a big enough sample, a t-test will call a trivially small imbalance “significant,” and with a small sample it will wave through a large one. Balance is a property of <em>this sample in front of you</em>, not a claim about a population — so use the measure that only measures the difference itself: the SMD.</div>
+  </div>
+</section>
+
+<section id="outcomes">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Analyzing the outcome after matching</h2></div>
+  <p>The groups are built and balanced — and we still haven't looked at the outcomes. Now we do. Everything in this section respects the pairing: the matched pairs are the unit of the design, and the analysis has to act like it.</p>
+  <h3>Binary outcome: permutation (randomization) tests</h3>
+  <p>Let the outcome be: did the patient's HbA1c fall by 3 percentage points or more? Code it 1 for yes, 0 for no. Six matched pairs might look like this:</p>
+  <div class="card"><table>
+    <tr><th>Matched pair</th><th>Treated outcome</th><th>Control outcome</th><th>Pair type</th></tr>
+    <tr><td>1</td><td class="c">0</td><td class="c">0</td><td style="text-align:left">Concordant — same</td></tr>
+    <tr><td>2</td><td class="c">1</td><td class="c">1</td><td style="text-align:left">Concordant — same</td></tr>
+    <tr><td>3</td><td class="c">0</td><td class="c">1</td><td style="text-align:left">Discordant — different</td></tr>
+    <tr><td>4</td><td class="c">1</td><td class="c">0</td><td style="text-align:left">Discordant — different</td></tr>
+    <tr><td>5</td><td class="c">0</td><td class="c">1</td><td style="text-align:left">Discordant — different</td></tr>
+    <tr><td>6</td><td class="c">1</td><td class="c">1</td><td style="text-align:left">Concordant — same</td></tr>
+  </table>
+  <p class="figcap">Pairs where both patients have the same outcome are <span class="fmt">[concordant pairs]</span>; pairs where they differ are <span class="fmt">[discordant pairs]</span>. The treated group's total [test statistic] here is 0+1+0+1+0+1 = 3.</p></div>
+  <p>Now the permutation idea [also called a <span class="fmt">randomization test</span> or exact test]. The null hypothesis is the sharp one: <em>the treatment made no difference for anyone</em> <span class="fmt">[Fisher's sharp null hypothesis]</span>. If that's true, then within each pair, which patient happened to get the treatment was effectively a coin flip — so swapping the two outcome labels inside a pair changes nothing about what “no effect” looks like.</p>
+  <p>So: for each <em>discordant</em> pair, flip a coin. Heads, swap the pair's outcomes between treated and control; tails, leave them. (Concordant pairs need no flip — swapping identical values changes nothing.) Recompute the treated total. Do it again. And again — say 1,000 or 10,000 times. You build the distribution of the treated total in a world where treatment does nothing, and then ask: how unusual is the total we actually observed, 3?</p>
+  <div class="card">
+    <button class="btn" id="perm-run" type="button">Run 2,000 permutations</button>
+    <svg id="perm-chart" viewBox="0 0 760 240" role="img" aria-label="Histogram of the treated-group total across permutations"></svg>
+    <div class="readout" id="perm-readout">Press the button. Each run flips a fair coin inside each of the 3 discordant pairs and recounts the treated total. The exact distribution is known for this tiny example — possible totals are 2, 3, 4, 5 with probabilities 1/8, 3/8, 3/8, 1/8 — so your simulation should land close to those shares.</div>
+    <p class="figcap">A teaching moment hiding in this example: the observed total, 3, sits almost exactly in the <em>middle</em> of the no-effect distribution. For a two-sided test, “as or more extreme than 3 in either direction” covers essentially every possible outcome — the exact two-sided p-value is <strong>1.0</strong>. Six pairs with this pattern contain no evidence of a treatment effect at all, and the permutation distribution shows you why at a glance, before any test is run.</p>
+  </div>
+  <h3>In practice, for a binary outcome: McNemar's test</h3>
+  <p>The permutation logic above is the theory. Day to day, for paired binary outcomes, you run <span class="fmt">[McNemar's test]</span>. First collapse the pairs into a 2×2 summary — count pairs by (treated outcome, control outcome):</p>
+  <div class="card"><table>
+    <tr><th></th><th>Control outcome = 1</th><th>Control outcome = 0</th></tr>
+    <tr><td><strong>Treated outcome = 1</strong></td><td class="c">2</td><td class="c">1 &nbsp;(b)</td></tr>
+    <tr><td><strong>Treated outcome = 0</strong></td><td class="c">2 &nbsp;(c)</td><td class="c">1</td></tr>
+  </table>
+  <p class="figcap">Only the discordant cells carry information about a treatment difference: b = 1 pair where only the treated patient had the outcome, c = 2 pairs where only the control patient did. McNemar's statistic, with the usual continuity correction, is (|b − c| − 1)² / (b + c) = (1 − 1)² / 3 = 0 — a p-value of 1.0, matching the permutation result above. In R: <code>mcnemar.test(matrix(c(2, 2, 1, 1), nrow = 2))</code> — note that R fills matrices down columns, so that ordering reproduces this table.</p></div>
+  <h3>Continuous outcome: paired comparisons</h3>
+  <p>The same idea works for a continuous outcome — here, the change in HbA1c itself rather than a yes/no version of it:</p>
+  <div class="card"><table>
+    <tr><th>Matched pair</th><th>Treated: HbA1c change</th><th>Control: HbA1c change</th><th>Pair difference (Treated − Control)</th></tr>
+    <tr><td>1</td><td>−1.8</td><td>−1.1</td><td>−0.7</td></tr>
+    <tr><td>2</td><td>−2.6</td><td>−1.4</td><td>−1.2</td></tr>
+    <tr><td>3</td><td>−0.9</td><td>−1.2</td><td>+0.3</td></tr>
+    <tr><td>4</td><td>−3.1</td><td>−1.0</td><td>−2.1</td></tr>
+    <tr><td>5</td><td>−1.5</td><td>−0.8</td><td>−0.7</td></tr>
+    <tr><td>6</td><td>−2.2</td><td>−1.6</td><td>−0.6</td></tr>
+  </table>
+  <p class="figcap">Illustrative values. The effect estimate is the average of the pair differences: (−0.7 −1.2 +0.3 −2.1 −0.7 −0.6) / 6 = −5.0 / 6 ≈ <strong>−0.83 percentage points</strong> — on average, treated patients' HbA1c fell about 0.83 points more than their matched controls'. Check the arithmetic yourself; that's the prove-it habit.</p></div>
+  <p>You can permutation-test this too: flip the sign of each pair difference by coin flip, recompute the average, repeat, and see where −0.83 falls in the no-effect distribution. In practice, the everyday tool is the <span class="fmt">[paired t-test]</span> on the pair differences — the same average difference, with a standard error computed from how much the pair differences vary.</p>
+  <div class="note"><span class="tag">Worth knowing exist — for further research</span>
+    <p style="margin:4px 0">Other outcome models built for matched or clustered designs include <span class="fmt">[conditional logistic regression]</span> (binary outcomes), a <span class="fmt">[stratified Cox model]</span> (time-to-event outcomes), and <span class="fmt">[generalized estimating equations, GEE]</span>. The common thread: the standard errors must account for the matched design. Analyzing matched data as if the patients were independent throws away the design you worked to build.</p>
+  </div>
+</section>
+
+<section id="sensitivity">
+  <div class="sec-head"><span class="sec-num">09</span><h2>What matching can't fix: sensitivity analysis</h2></div>
+  <p>Even after carefully matching on every confounder we can see — baseline HbA1c, smoking, age — an observational study still has a problem matching cannot solve: <span class="fmt">[unmeasured confounding / hidden bias]</span>. There may be factors that influenced which drug a patient got <em>and</em> how they did, which were never captured in the data (or which we chose not to use).</p>
+  <p>Example: “patient motivation,” as expressed through diet and exercise habits. It's not in our dataset. But suppose providers tend to prescribe the SGLT2 inhibitor to patients they judge to be motivated — good diet, regular exercise. Then part of the SGLT2 group's better outcomes might be their habits, not the drug. Matching on everything we measured can't remove a variable we never measured.</p>
+  <p><span class="fmt">[Sensitivity analysis]</span> is the stress test that follows. At a high level it asks one question: <strong>how much hidden bias would there have to be for the result we observed to change?</strong> If it takes a lot of hidden bias to overturn the result, the study is robust. If a little would do it, the study is fragile — and we can measure “how much” mathematically.</p>
+  <h3>The ideal world, inside one pair</h3>
+  <p>Take one matched pair: Patient i got the new drug, Patient j got the standard drug, and on paper they're clinical twins — same baseline HbA1c, smoking status, age. Call their true (pre-treatment) probabilities of being prescribed the new drug π<sub>i</sub> and π<sub>j</sub>.</p>
+  <ul>
+    <li><strong>No hidden bias:</strong> if we really measured and matched on everything that matters, two patients who look identical had the <em>same</em> probability of getting the new drug. Inside the pair, who got it was a fair 50/50 coin flip, and the ratio of their odds of treatment is exactly 1.</li>
+    <li><strong>Hidden bias exists:</strong> suppose the provider could see something we can't — Patient i is a highly motivated health enthusiast, Patient j is sedentary. Then π<sub>i</sub> was secretly much larger than π<sub>j</sub> all along, even though our data calls them twins.</li>
+  </ul>
+  <h3>The sensitivity parameter: Γ (Gamma)</h3>
+  <p>Since we can't measure the hidden factor, we instead <em>bound</em> how much it could have tilted things, using a multiplier called <span class="fmt">[Γ, the Rosenbaum sensitivity parameter]</span>:</p>
+  <div class="formula">
+    <div class="f">1/Γ &nbsp;≤&nbsp; [ π<sub>i</sub> / (1 − π<sub>i</sub>) ] / [ π<sub>j</sub> / (1 − π<sub>j</sub>) ] &nbsp;≤&nbsp; Γ</div>
+    <div class="fdesc">The middle term is a ratio of <strong>odds</strong> — Patient i's odds of treatment divided by Patient j's odds. Γ is a “hidden bias knob”: it caps how far apart those odds can be, inside any matched pair, because of unmeasured factors. Γ = 1 means no advantage either way (equal odds, a fair coin). Γ = 1.1 means one patient could have up to 1.1× the <em>odds</em> — about 10% higher odds, not 10% higher probability — of the other. Γ = 2 means up to double the odds. The bound is two-sided [the “sandwich”] because the hidden factor could have favored either patient: the ratio could be Γ or 1/Γ, and we don't know which.</div>
+  </div>
+  <div class="card">
+    <label for="gamma-slider"><strong>Try it:</strong> the hidden-bias knob, Γ</label>
+    <input type="range" id="gamma-slider" min="1" max="3" step="0.05" value="1" />
+    <svg id="gamma-chart" viewBox="0 0 760 110" role="img" aria-label="Bar showing the possible range for the probability that the treated patient in a pair is the one who received treatment, as Gamma changes"></svg>
+    <div class="readout" id="gamma-readout"></div>
+    <p class="figcap">What Γ means inside a single pair, in probability terms: with no hidden bias (Γ = 1), each of the two “twins” had a 50% chance of being the treated one. With hidden bias bounded by Γ, that chance for a given patient can range from 1/(1+Γ) up to Γ/(1+Γ). At Γ = 2, the split could secretly have been as lopsided as 33% / 67% instead of 50% / 50%.</p>
+  </div>
+  <h3>How the stress test works in practice</h3>
+  <p>We don't re-match anything. We keep the same pairs and repeat the outcome test, assuming the <em>worst case</em>: that the hidden bias is working entirely in the treatment's favor. As Γ rises from 1, the worst-case p-value rises with it — we're steadily allowing “maybe it was the hidden habits, not the drug” to explain more of the result. The value of Γ where the worst-case p-value crosses 0.05 — where the result stops being statistically significant — is the <span class="fmt">[tipping point]</span>.</p>
+  <p>A rough guide to reading a tipping point:</p>
+  <div class="card"><table>
+    <tr><th>Tipping point Γ</th><th>How to read it</th></tr>
+    <tr><td>1.0 – 1.2</td><td style="text-align:left">Very fragile — even a tiny unmeasured bias could explain the result away</td></tr>
+    <tr><td>1.3 – 1.5</td><td style="text-align:left">Moderately sensitive</td></tr>
+    <tr><td>1.6 – 2.0</td><td style="text-align:left">Moderately robust — often considered a reassuring range</td></tr>
+    <tr><td>2.0 – 3.0</td><td style="text-align:left">Highly robust</td></tr>
+    <tr><td>Above 3.0</td><td style="text-align:left">Very robust</td></tr>
+  </table>
+  <p class="figcap">Treat this as a rough interpretive heuristic, not a universal scale: a Γ only means something relative to the confounding you <em>did</em> measure. The strongest reporting puts the tipping point next to the observed influence of known strong confounders — “an unmeasured factor would have to matter more than baseline HbA1c itself” is a claim a reader can actually judge.</p></div>
+  <p>Report it in plain language either way: “an unmeasured confounder would have to increase a patient's odds of receiving the new drug by 2.5-fold before it could invalidate our conclusion” is a sentence any decision-maker can weigh.</p>
+</section>
+
+<section id="propensity">
+  <div class="sec-head"><span class="sec-num">10</span><h2>Propensity scores: one number instead of many covariates</h2></div>
+  <p>Everything so far matched on the covariates themselves. There's a second route: match on one summary number per patient — the <span class="fmt">[propensity score]</span>, the probability that a patient with their particular covariate values receives the treatment:</p>
+  <div class="formula">
+    <div class="f">π(x) = P( A = 1 &nbsp;|&nbsp; X = x )</div>
+    <div class="fdesc">In practice we estimate it by fitting a <span class="fmt">[logistic regression]</span> of treatment (1/0) on the covariates and taking each patient's predicted probability. A few lines of code — the logistic regression itself is a separate topic, covered in its own playbook.</div>
+  </div>
+  <p>Why is matching on this one number legitimate? Because of the propensity score's <span class="fmt">[balancing property]</span>: among patients with the <em>same</em> propensity score, the distribution of covariates is the same in the treatment and control groups — stochastic balance, achieved through the score:</p>
+  <div class="formula">
+    <div class="f">X &nbsp;⊥&nbsp; A &nbsp;|&nbsp; π(X)</div>
+    <div class="fdesc"><strong>What this line says, intuitively:</strong> the symbol ⊥ means “is independent of” — knowing one tells you nothing about the other — and the bar | means “once we hold this fixed.” So read it as: <em>once we hold the propensity score fixed — that is, once we look only at patients who all share the same score — knowing a patient's covariates tells you nothing more about whether they got treated.</em> Inside that slice, treatment no longer tracks the covariates at all; who got treated behaves like a coin flip (a weighted one — see below). That's exactly why balance follows.</div>
+  </div>
+  <p>Written out as shares instead of symbols, the same property says:</p>
+  <div class="formula">
+    <div class="f">P( X = x &nbsp;|&nbsp; A = 1, π(X) = p ) &nbsp;=&nbsp; P( X = x &nbsp;|&nbsp; A = 0, π(X) = p )</div>
+  </div>
+  <h3>Breaking down the notation (spreadsheet version)</h3>
+  <ul>
+    <li><strong>X</strong> (capital) is the set of column headers — our covariate variables [baseline HbA1c, smoking status, age].</li>
+    <li><strong>x</strong> (small) is one specific combination of values typed into the filter — say [moderate HbA1c, smoker, young].</li>
+    <li><strong>X = x</strong> means “this patient's covariates are exactly that combination.”</li>
+    <li><strong>P( X = x | … )</strong> is then a group-level share: of the patients in the group described after the bar, what percentage have that combination?</li>
+    <li><strong>π(X)</strong> is the propensity-score function — feed it a patient's covariates, get a probability. (The π here is just the name of the function; it's the same π whose value for one patient we called π<sub>i</sub> back in the sensitivity section.)</li>
+    <li>Small <strong>p</strong> is one actual score value — a specific number the function can output, like 0.7.</li>
+    <li><strong>A</strong> is actual treatment: A = 1 got the new drug, A = 0 didn't.</li>
+  </ul>
+  <p>Put together, the formula says: <em>filter to patients who all share the same propensity score, and the share with any given covariate combination is the same in the treated group as in the control group.</em></p>
+  <p>Note carefully what it does <strong>not</strong> say: it does not say individual patients i and j have identical covariates (x<sub>i</sub> = x<sub>j</sub>). It's a statement about group distributions, not about pairs.</p>
+  <div class="note"><span class="tag">Wait — didn't fine balance relax the joint distribution?</span>
+    <p style="margin:4px 0">Good catch, and yes — this really is different from fine balance, in an instructive way. <strong>Fine balance</strong> (Section 3) is something <em>we construct</em> in a matched sample: we enforced the <em>marginal</em> distributions exactly — same % smokers, same % severe, same % age 40 in each group — and we got that precisely by giving up on the <em>joint</em> pairing inside each pair. Look back at that table: the treated group's combinations were (severe, smoker, 40) and (mild, non-smoker, 25), while the control group's were (severe, non-smoker, 25) and (mild, smoker, 40). Marginals identical; joint combinations completely different.</p>
+    <p style="margin:4px 0"><strong>The propensity balancing property is a stronger claim, but of a different kind.</strong> It isn't something we construct pair by pair — it's a fact about the population, at an <em>exact</em> propensity score: because x in the formula above is a <em>whole combination</em> of values, not one variable at a time, the equality covers the joint distribution too — in expectation. Two honest caveats keep that from being magic: (1) it holds at an exact score value, while real matching groups together patients with <em>similar</em> scores, so in a real matched dataset the balance — marginal and joint — is approximate, with the usual finite-sample wobble; and (2) it still says nothing about individual pairs being identical. Short version: fine balance = exact marginals, by construction, in your sample. Propensity balance = marginals <em>and</em> joints, in expectation, in the population at a fixed score — which your matched sample then approximates.</p>
+  </div>
+  <h3>Why the coin-flip picture makes it intuitive</h3>
+  <p>Filter the data to patients whose propensity score is 0.7, and picture 100 of them. Each of these patients had, by construction of the score, a 70% probability of receiving the treatment — as if, without looking at their outcomes, we walked down the rows flipping a coin weighted 70% heads / 30% tails, heads meaning “treated.” A weighted coin, flipped independently of everything else about the patient, cannot sort smokers into one group and non-smokers into the other — so, <em>in expectation</em>, the covariate mix is the same among the treated and the controls in this slice.</p>
+  <p>Two careful words in that paragraph matter. First, <em>in expectation</em>: a 0.7 score doesn't guarantee exactly 70 of the 100 patients were treated — the realized count bounces around 70 the way coin flips do. What the balancing property guarantees is the <em>mechanism</em>: treatment behaves like a (weighted) coin flip that doesn't depend on the covariates, so there is no systematic sorting. In a large group, the shares land close to equal; in a small one, expect wobble — the same fine print that applies to stochastic balance in a real randomized trial. Second, this works for joint combinations too, not just one covariate at a time: the coin doesn't know whether a patient is simultaneously “mild HbA1c, smoker, and young,” so that combination is also distributed evenly in expectation.</p>
+  <p>That's the whole mathematical permission slip: because balance is preserved through the score, matching on the score is matching on the covariates — compressed.</p>
+</section>
+
+<section id="psm">
+  <div class="sec-head"><span class="sec-num">11</span><h2>Propensity score matching in practice</h2></div>
+  <p>How do we actually do it? First, look. Plot the distribution [histogram] of propensity scores, split by treatment group, and check the <span class="fmt">[overlap]</span>:</p>
+  <div class="card">
+    <div>
+      <button class="btn on" id="ov-good" type="button">Good overlap</button>
+      <button class="btn" id="ov-poor" type="button">Poor overlap</button>
+    </div>
+    <svg id="overlap-chart" viewBox="0 0 760 360" role="img" aria-label="Mirrored histograms of propensity scores: control patients above the axis, treatment patients below it"></svg>
+    <p class="figcap" id="overlap-cap"><strong>How to read this chart:</strong> it's one chart, mirrored. Control patients (metformin) are plotted <em>above</em> the axis and treatment patients (SGLT2) <em>below</em> it, over the same propensity-score scale — so wherever you see bars on both sides at the same score, both groups exist there and matching is possible. Counts are illustrative patients per score bin. <strong>Good overlap:</strong> across most of the range, both sides have bars. Toggle to <em>Poor overlap</em> to see the problem case.</p>
+  </div>
+  <p>One pattern to expect in the good-overlap picture: the treated group's scores lean higher than the control group's. That isn't circular — the score is a <em>pre-treatment prediction</em>, built only from baseline covariates. It leans that way because the covariate patterns that make treatment likely (more severe disease, for instance) genuinely are more common among the patients who ended up treated. The score summarizes <em>why</em> the groups differed in the first place.</p>
+  <p>In the poor-overlap picture, look at the ends. Near a score of 0, there are (almost) only control patients: patients like them essentially never got the treatment. Near 1, only treated patients. Those regions are <em>deterministic</em>, and matching there would mean pretending a comparison exists where it doesn't — a violation of the positivity assumption from Section 6.</p>
+  <h3>Trimming the tails</h3>
+  <p>The fix is to restrict the study to the region where both groups exist — <span class="fmt">[trimming]</span> to the common support. The simple version of the rule:</p>
+  <ul>
+    <li>Drop any control patient whose propensity score is <em>below the minimum</em> score among treated patients.</li>
+    <li>Drop any treated patient whose score is <em>above the maximum</em> score among control patients.</li>
+  </ul>
+  <p>Cleaner, but not free: trimming changes the population your estimate describes, and if you trim a lot of treated patients, your ATT is now the effect on the <em>matchable</em> treated — which is exactly why we report who was dropped. (More refined overlap rules exist; the min/max rule is the transparent starting point.)</p>
+  <h3>The logit transformation: stretching the scale</h3>
+  <p>Sometimes nearly all the scores pile up near zero — for a rarely prescribed drug, a typical probability of treatment might be 0.01. Distances between scores like 0.008 and 0.02 are tiny on the probability scale even though one patient was two-and-a-half times as likely to be treated as the other. The fix is to match on the <span class="fmt">[logit transformation]</span> of the score instead:</p>
+  <div class="formula">
+    <div class="f">logit(p) = ln( p / (1 − p) )</div>
+    <div class="fdesc">The log of the <strong>odds</strong>. It stretches the cramped (0, 1) probability scale out across the whole real number line — small probabilities spread apart, and equal <em>ratios</em> of odds become equal <em>distances</em>. Matching and distance measurement get much better behaved on this scale.</div>
+  </div>
+  <h3>Calipers on the propensity score</h3>
+  <p>Same caliper idea as Section 6, now on the logit-of-score scale. The widely used rule of thumb: a caliper of <strong>0.2 times the standard deviation of the logit of the propensity score</strong>. Fine-tune it — 0.1 for a tighter, pickier match; wider than 0.2 if you're discarding too many treated patients — and recognize the familiar trade-off underneath: a <em>tighter</em> caliper means fewer matches — the matches you keep are closer (less bias), but with fewer patients your estimate wobbles more (more variance), and more treated patients get discarded entirely. A <em>wider</em> caliper admits more potential matches — more patients, so less variance — but the extra matches are worse ones (more bias).</p>
+  <p>Once the propensity-score matches are made, everything from Sections 7–9 applies unchanged: check balance (on the original covariates, not just the score), analyze outcomes respecting the pairs, and run the sensitivity analysis.</p>
+  <div class="card">
+    <p style="margin-top:2px"><strong>The whole job, in code (R sketch)</strong> — the shape of a real run, to adapt, not to copy blindly:</p>
+<pre><code># 1. Estimate propensity scores + match (logit-scale distance)
+library(MatchIt)
+m &lt;- matchit(treated ~ baseline_hba1c + smoker + age + bmi + male,
+             data = diabetes, method = "nearest", distance = "glm",
+             link = "logit", ratio = 1,
+             caliper = 0.2)          # 0.2 x SD of logit score (std.caliper)
+
+# 2. Check balance BEFORE touching outcomes
+summary(m)                          # SMDs, before vs after
+plot(m, type = "love")              # the Love plot from Section 7
+
+# 3. Analyze outcomes respecting the pairs
+matched_data &lt;- match.data(m)       # carries pair ids (subclass)
+# binary outcome: mcnemar.test(...) on the pair table (Section 8)
+# continuous outcome: paired t-test on pair differences (Section 8)
+
+# 4. Stress-test: sensitivity analysis for hidden bias (Section 9)
+# e.g. rbounds / sensitivitymv packages implement Rosenbaum bounds</code></pre>
+    <p class="figcap">Package names from the draft and standard practice: <code>MatchIt</code> for matching, <code>optmatch</code> / <code>rcbalance</code> for optimal matching. The order of the steps is the discipline: estimate, match, <em>check balance</em>, and only then look at outcomes.</p>
+  </div>
+</section>
+
+<section id="checklist">
+  <div class="sec-head"><span class="sec-num">12</span><h2>The playbook, on one page</h2></div>
+  <ol class="checklist">
+    <li><strong>Frame it.</strong> No trial is possible; the data are observational. Name the treatment, the control, the outcome — and the running example you'll judge everything against. Decide that you're estimating the effect on the treated [ATT] unless you deliberately target the whole population [ATE].</li>
+    <li><strong>List your confounders — before outcomes.</strong> Baseline variables that plausibly influenced both who got treated and how they did. Matching can only balance what you measured; the rest is Section 9's problem.</li>
+    <li><strong>Choose the matching route.</strong> Match on the covariates directly (Mahalanobis distance, exact constraints where a covariate is non-negotiable), or compress the covariates into a propensity score and match on its logit.</li>
+    <li><strong>Set the knobs, knowing the trade-off.</strong> One-to-one vs. many-to-one; greedy vs. optimal; a caliper that refuses bad matches. Every knob is a bias–variance choice: more matches = less variance, worse matches.</li>
+    <li><strong>Respect the support.</strong> Check overlap. Trim to common support, enforce positivity, count and report every patient you drop — your answer now describes the patients who remain.</li>
+    <li><strong>Check balance — outcomes still untouched.</strong> Table 1 and a Love plot. Target |SMD| &lt; 0.1 on every covariate, and don't judge balance with p-values. Not balanced? Change the matching, not the standard.</li>
+    <li><strong>Analyze the outcome as a paired design.</strong> Permutation logic underneath; McNemar for binary outcomes, a paired t-test for continuous ones, matched-design standard errors throughout.</li>
+    <li><strong>Stress-test it.</strong> Sensitivity analysis: report the Γ tipping point — how strong an unmeasured confounder would have to be to overturn the result — next to the strength of the confounders you did measure.</li>
+    <li><strong>Report the whole trail.</strong> Who was dropped, what balance looked like before and after, the effect for the treated patients you actually kept, and how fragile it is. That trail <em>is</em> the credibility of an observational study.</li>
+  </ol>
+  <div class="callout"><p>Matching doesn't turn observational data into a randomized trial. It does something almost as useful: it makes the comparison <em>honest</em> — groups that start alike on everything you can see, an analysis that respects how they were built, and a stated price, in Γ, for everything you can't.</p></div>
+</section>
+
+<footer>
+  <p><strong>Source:</strong> Adapted from <em>A Crash Course in Causality: Inferring Causal Effects from Observational Data</em> — Penn Medicine, Jason Roy, Ph.D. All datasets, tables, and figures in this post are illustrative examples constructed for teaching, built around the diabetes scenario described in the text; SMD values are computed from the tabled means, standard deviations, and proportions using the formulas shown.</p>
+  <p>Applied Data Science Lab · Causal Inference · Matching and Propensity score Matching: The Practical Playbook</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+var NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function txt(parent,x,y,s,attrs){var t=el("text",Object.assign({x:x,y:y,"font-size":"13",fill:"#4c5866","text-anchor":"middle"},attrs||{}),parent);t.textContent=s;return t;}
+function norm(x,m,s){return Math.exp(-0.5*Math.pow((x-m)/s,2))/(s*Math.sqrt(2*Math.PI));}
+
+/* ---- 1. HbA1c bell curves, before / after ---- */
+var hChart=document.getElementById("hba1c-chart"), hCap=document.getElementById("hba1c-cap");
+function drawHb(state){
+  hChart.innerHTML="";
+  var W=760,H=300,pl=46,pr=16,pt=18,pb=42,pw=W-pl-pr,ph=H-pt-pb;
+  var xmin=5.2,xmax=11.8,ymax=0.38;
+  function X(v){return pl+(v-xmin)/(xmax-xmin)*pw;}
+  function Y(v){return pt+ph-(v/ymax)*ph;}
+  el("line",{x1:pl,y1:pt+ph,x2:pl+pw,y2:pt+ph,stroke:"#d9d9d2"},hChart);
+  for(var v=6;v<=11;v++){txt(hChart,X(v),pt+ph+24,String(v));el("line",{x1:X(v),y1:pt+ph,x2:X(v),y2:pt+ph+5,stroke:"#999"},hChart);}
+  txt(hChart,pl+pw/2,H-2,"Baseline HbA1c (%)",{"font-size":"13.5",fill:"#1c2430"});
+  txt(hChart,16,pt+ph/2,"Patients (density)",{transform:"rotate(-90 16 "+(pt+ph/2)+")","font-size":"13.5",fill:"#1c2430"});
+  var groups= state==="before"
+    ? [{m:8.9,s:1.3,c:"#b4552d",lab:"Treated mean 8.9"},{m:8.1,s:1.2,c:"#3d6db5",lab:"Control mean 8.1"}]
+    : [{m:8.8,s:1.25,c:"#b4552d",lab:"Treated mean 8.8"},{m:8.75,s:1.22,c:"#3d6db5",lab:"Control mean 8.75"}];
+  groups.forEach(function(g){
+    var d="",dFill="";
+    for(var x=xmin;x<=xmax;x+=0.05){var px=X(x),py=Y(norm(x,g.m,g.s));d+=(d?"L":"M")+px.toFixed(1)+" "+py.toFixed(1)+" ";}
+    dFill=d+"L"+X(xmax)+" "+(pt+ph)+" L"+X(xmin)+" "+(pt+ph)+" Z";
+    el("path",{d:dFill,fill:g.c,opacity:"0.16",stroke:"none"},hChart);
+    el("path",{d:d,fill:"none",stroke:g.c,"stroke-width":"2.6"},hChart);
+    el("line",{x1:X(g.m),y1:Y(norm(g.m,g.m,g.s)),x2:X(g.m),y2:pt+ph,stroke:g.c,"stroke-dasharray":"4 4"},hChart);
+    txt(hChart,X(g.m),Y(norm(g.m,g.m,g.s))-8,g.lab,{"font-weight":"600",fill:g.c});
+  });
+}
+var bB=document.getElementById("btn-before"),bA=document.getElementById("btn-after");
+var capBefore=hCap.innerHTML;
+var capAfter="<strong>After matching:</strong> the matched control group was built to look like the treated group, and it does — the curves sit almost on top of each other (mean 8.8% vs. 8.75%). The comparison is now about the drugs, not about who started out sicker. Illustrative distributions built from the Table 1 values in Section 7.";
+bB.addEventListener("click",function(){bB.classList.add("on");bA.classList.remove("on");drawHb("before");hCap.innerHTML=capBefore;});
+bA.addEventListener("click",function(){bA.classList.add("on");bB.classList.remove("on");drawHb("after");hCap.innerHTML=capAfter;});
+drawHb("before");
+
+/* ---- 2. Bias-variance slider ---- */
+var kSlider=document.getElementById("k-slider"),bv=document.getElementById("bv-chart"),bvOut=document.getElementById("bv-readout");
+var controlVals=[9.50,9.45,9.35,9.20,9.05];
+function drawBV(){
+  var k=parseInt(kSlider.value,10);
+  var used=controlVals.slice(0,k);
+  var mean=used.reduce(function(a,b){return a+b;},0)/k;
+  var bias=9.50-mean, relSE=1/Math.sqrt(k);
+  bv.innerHTML="";
+  var rows=[{lab:"Bias — gap from 9.50%",val:bias,max:0.25,c:"#b3372a",disp:bias.toFixed(2)+" points"},
+            {lab:"Variance — relative std. error",val:relSE,max:1,c:"#3d6db5",disp:relSE.toFixed(2)+"× (k = 1 baseline)"}];
+  rows.forEach(function(r,i){
+    var y=28+i*72;
+    txt(bv,8,y+5,r.lab,{"text-anchor":"start","font-size":"14",fill:"#1c2430","font-weight":"600"});
+    el("rect",{x:8,y:y+14,width:660,height:24,rx:6,fill:"#efefea"},bv);
+    el("rect",{x:8,y:y+14,width:Math.max(4,660*r.val/r.max),height:24,rx:6,fill:r.c},bv);
+    txt(bv,690,y+31,r.disp,{"text-anchor":"start","font-size":"13.5",fill:"#1c2430","font-weight":"600"});
+  });
+  bvOut.textContent="k = "+k+"  ·  controls kept: "+(k*100)+" of 2,000  ·  average matched-control HbA1c: "+mean.toFixed(2)+"%  ·  bias gap: "+bias.toFixed(2)+" points  ·  relative SE: "+relSE.toFixed(2)+"×";
+}
+kSlider.addEventListener("input",drawBV);drawBV();
+
+/* ---- 3. Love plot ---- */
+var love=document.getElementById("love-chart");
+(function(){
+  var data=[["Baseline HbA1c",0.64,0.04],["Severe HbA1c ≥ 9%",0.52,0.02],["BMI",0.41,0.04],["Smoker",0.35,0.02],["Age",0.33,0.03],["Male",0.10,0.02]];
+  var W=760,pl=170,pr=70,pt=14,rowH=44,pw=W-pl-pr;
+  function X(v){return pl+v/0.75*pw;}
+  data.forEach(function(r,i){
+    var y=pt+i*rowH+16;
+    txt(love,pl-10,y+4,r[0],{"text-anchor":"end","font-size":"13.5",fill:"#1c2430"});
+    el("line",{x1:pl,y1:y,x2:pl+pw,y2:y,stroke:"#e3e3de"},love);
+    el("circle",{cx:X(r[2]),cy:y,r:6,fill:"#0e7569"},love);
+    el("circle",{cx:X(r[1]),cy:y,r:6,fill:"#b3372a"},love);
+    txt(love,X(r[1])+16,y+4,r[1].toFixed(2),{"text-anchor":"start",fill:"#b3372a","font-weight":"600"});
+    txt(love,X(r[2])+16,y+4,r[2].toFixed(2),{"text-anchor":"start",fill:"#0e7569","font-weight":"600"});
+  });
+  var lx=X(0.1);
+  el("line",{x1:lx,y1:6,x2:lx,y2:pt+data.length*rowH,stroke:"#9a6a12","stroke-dasharray":"5 4","stroke-width":"1.6"},love);
+  txt(love,lx,pt+data.length*rowH+18,"|SMD| = 0.1 target",{fill:"#9a6a12","font-weight":"600"});
+  txt(love,X(0),pt+data.length*rowH+18,"0",{"text-anchor":"middle"});
+})();
+  
+/* ---- 4. Permutation simulation ---- */
+var permBtn=document.getElementById("perm-run"),perm=document.getElementById("perm-chart"),permOut=document.getElementById("perm-readout");
+function drawPerm(counts,total){
+  perm.innerHTML="";
+  var W=760,H=240,pl=46,pr=16,pt=28,pb=40,pw=W-pl-pr,ph=H-pt-pb;
+  var labels=["2","3","4","5"],exact=[0.125,0.375,0.375,0.125];
+  var maxP=0.5;
+  labels.forEach(function(lab,i){
+    var bw=pw/4,bx=pl+i*bw+bw*0.22,bwid=bw*0.56;
+    var share= total? counts[i]/total : 0;
+    var bh=share/maxP*ph;
+    el("rect",{x:bx,y:pt+ph-bh,width:bwid,height:bh,rx:5,fill: lab==="3" ? "#b4552d" : "#3d6db5"},perm);
+    txt(perm,bx+bwid/2,pt+ph-bh-8,total? Math.round(share*100)+"%" : "",{"font-weight":"600",fill:"#1c2430"});
+    txt(perm,bx+bwid/2,pt+ph+22,"Treated total = "+lab,{fill:"#1c2430"});
+    txt(perm,bx+bwid/2,pt+ph+38,"exact: "+Math.round(exact[i]*100)+"%",{});
+  });
+  txt(perm,pl+pw/2,16,"Distribution of the treated total when treatment does nothing (orange = observed, 3)",{"font-size":"13.5",fill:"#1c2430","font-weight":"600"});
+}
+drawPerm([0,0,0,0],0);
+permBtn.addEventListener("click",function(){
+  var counts=[0,0,0,0],N=2000;
+  for(var n=0;n<N;n++){
+    var k=0; for(var j=0;j<3;j++){ if(Math.random()<0.5) k++; }
+    // Treated sum = concordant contribution (2) + number of discordant pairs where treated ends with 1.
+    // Discordant pairs start with treated values [0,1,0]; a coin flip swaps or not, equivalent to a fair Bernoulli draw per pair.
+    counts[k]++;
+  }
+  drawPerm(counts,N);
+  permOut.textContent="Ran "+N+" permutations. Treated total = 3 occurred in "+Math.round(counts[1]/N*100)+"% of runs (exact: 37.5%). The observed 3 is the joint-most-likely outcome under no effect — no evidence of a difference here, exactly as the exact two-sided p-value of 1.0 says.";
+});
+
+/* ---- 5. Gamma slider ---- */
+var gSlider=document.getElementById("gamma-slider"),gChart=document.getElementById("gamma-chart"),gOut=document.getElementById("gamma-readout");
+function gammaLabel(g){
+  if(g<=1.2)return "Very fragile territory — if this were your tipping point, a tiny hidden bias could explain your result.";
+  if(g<=1.5)return "Moderately sensitive territory for a tipping point.";
+  if(g<=2.0)return "Moderately robust territory for a tipping point — often considered reassuring.";
+  if(g<=3.0)return "Highly robust territory for a tipping point.";
+  return "Very robust territory.";
+}
+function drawGamma(){
+  var g=parseFloat(gSlider.value);
+  var lo=1/(1+g),hi=g/(1+g);
+  gChart.innerHTML="";
+  var W=760,pl=46,pr=46,pw=W-pl-pr,y=38,h=30;
+  function X(p){return pl+p*pw;}
+  el("rect",{x:pl,y:y,width:pw,height:h,rx:7,fill:"#efefea"},gChart);
+  el("rect",{x:X(lo),y:y,width:X(hi)-X(lo),height:h,rx:7,fill:"#0e7569",opacity:"0.75"},gChart);
+  el("line",{x1:X(0.5),y1:y-8,x2:X(0.5),y2:y+h+8,stroke:"#b4552d","stroke-dasharray":"4 4","stroke-width":"1.8"},gChart);
+  txt(gChart,X(0.5),y+h+28,"50% — the fair-coin split at Γ = 1",{fill:"#b4552d","font-weight":"600"});
+  txt(gChart,X(lo),y-10,(lo*100).toFixed(0)+"%",{fill:"#0e7569","font-weight":"700"});
+  txt(gChart,X(hi),y-10,(hi*100).toFixed(0)+"%",{fill:"#0e7569","font-weight":"700"});
+  txt(gChart,pl,16,"Possible chance that a given patient in a pair was the treated one:",{"text-anchor":"start",fill:"#1c2430","font-weight":"600"});
+  gOut.textContent="Γ = "+g.toFixed(2)+"  ·  odds of treatment can differ by up to "+g.toFixed(2)+"× inside a pair  ·  in probability terms, the split can be as lopsided as "+(lo*100).toFixed(0)+"% / "+(hi*100).toFixed(0)+" instead of 50% / 50%.  "+gammaLabel(g);
+}
+gSlider.addEventListener("input",drawGamma);drawGamma();
+
+/* ---- 6. Propensity overlap ---- */
+var ov=document.getElementById("overlap-chart"),ovCap=document.getElementById("overlap-cap");
+var capGood=ovCap.innerHTML;
+var capPoor="<strong>How to read this chart:</strong> it's one chart, mirrored. Control patients (metformin) are plotted <em>above</em> the axis and treatment patients (SGLT2) <em>below</em> it, over the same propensity-score scale — so wherever you see bars on both sides at the same score, both groups exist there and matching is possible. Counts are illustrative patients per score bin. <strong>Poor overlap:</strong> at the low end the bars exist only on the control side, at the high end only on the treatment side — those shaded regions are deterministic, violate positivity, and must be trimmed to the common support before matching. The unshaded middle is where a real comparison exists.";
+function drawOverlap(mode){
+  ov.innerHTML="";
+  var W=760,pl=64,pr=16,pw=W-pl-pr,axisY=172,halfH=132,maxCount=45,scale=halfH/maxCount,bins=14,bw=pw/bins;
+  // counts = illustrative patients per propensity-score bin (14 bins spanning 0 to 1)
+  var treated,control;
+  if(mode==="good"){ control=[6,14,24,34,40,42,38,32,26,20,14,9,5,2]; treated=[2,5,9,14,20,26,32,36,38,34,28,20,12,6]; }
+  else { control=[38,42,36,28,20,13,8,4,2,1,0,0,0,0]; treated=[0,0,0,1,2,4,7,12,20,28,36,40,34,24]; }
+  function X(bin){return pl+bin*bw;}
+  // no-overlap shading first, so bars draw on top
+  if(mode==="poor"){
+    [ [0,3],[10,14] ].forEach(function(seg){
+      el("rect",{x:X(seg[0]),y:axisY-halfH,width:(seg[1]-seg[0])*bw,height:halfH*2,fill:"#b3372a",opacity:"0.08"},ov);
+    });
+  }
+  // gridlines + y-axis (count) ticks, mirrored: same count scale up and down
+  [0,20,40].forEach(function(c){
+    var yu=axisY-c*scale, yd=axisY+c*scale;
+    el("line",{x1:pl,y1:yu,x2:pl+pw,y2:yu,stroke: c===0 ? "#8a8f98" : "#e3e3de","stroke-width": c===0 ? "1.6" : "1"},ov);
+    if(c>0) el("line",{x1:pl,y1:yd,x2:pl+pw,y2:yd,stroke:"#e3e3de"},ov);
+    txt(ov,pl-8,yu+4,String(c),{"text-anchor":"end"});
+    if(c>0) txt(ov,pl-8,yd+4,String(c),{"text-anchor":"end"});
+  });
+  el("line",{x1:pl,y1:axisY-halfH,x2:pl,y2:axisY+halfH,stroke:"#8a8f98"},ov);
+  txt(ov,18,axisY,"Patients per bin (count)",{transform:"rotate(-90 18 "+axisY+")","font-size":"13.5",fill:"#1c2430","font-weight":"600"});
+  // group labels
+  txt(ov,pl,axisY-halfH-10,"▲ Control (metformin) — above the axis",{"text-anchor":"start",fill:"#3d6db5","font-weight":"700"});
+  txt(ov,pl+pw,axisY-halfH-10,"Treatment (SGLT2 inhibitor) — below the axis ▼",{"text-anchor":"end",fill:"#b4552d","font-weight":"700"});
+  // mirrored bars: control up, treatment down, same bins
+  control.forEach(function(v,i){ if(v>0) el("rect",{x:X(i)+2,y:axisY-v*scale,width:bw-4,height:v*scale,fill:"#3d6db5",opacity:"0.78",stroke:"#fff","stroke-width":"0.6"},ov); });
+  treated.forEach(function(v,i){ if(v>0) el("rect",{x:X(i)+2,y:axisY,width:bw-4,height:v*scale,fill:"#b4552d",opacity:"0.78",stroke:"#fff","stroke-width":"0.6"},ov); });
+  if(mode==="poor"){
+    // labels sit in the empty half of each shaded band (below left, above right) so bars never cover them
+    txt(ov,X(1.5),axisY+halfH-10,"no overlap — trim",{fill:"#b3372a","font-weight":"600","font-size":"12"});
+    txt(ov,X(12),axisY-halfH+16,"no overlap — trim",{fill:"#b3372a","font-weight":"600","font-size":"12"});
+  }
+  // x-axis: propensity score
+  for(var i=0;i<=4;i++){var v=i*0.25;var x=pl+v*pw;el("line",{x1:x,y1:axisY+halfH,x2:x,y2:axisY+halfH+5,stroke:"#999"},ov);txt(ov,x,axisY+halfH+22,v===0?"0":v===1?"1.0":v.toFixed(2).replace("0.","."));}
+  txt(ov,pl+pw/2,axisY+halfH+44,"Propensity score — π(x)",{"font-size":"13.5",fill:"#1c2430","font-weight":"600"});
+}
+var og=document.getElementById("ov-good"),op=document.getElementById("ov-poor");
+og.addEventListener("click",function(){og.classList.add("on");op.classList.remove("on");drawOverlap("good");ovCap.innerHTML=capGood;});
+op.addEventListener("click",function(){op.classList.add("on");og.classList.remove("on");drawOverlap("poor");ovCap.innerHTML=capPoor;});
+drawOverlap("good");
+})();
+</script>
+</body>
+</html>
