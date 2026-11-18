@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light" />
+<meta name="author" content="Daniel Jordan Viray" />
+<meta property="article:author" content="Daniel Jordan Viray" />
+<meta property="article:published_time" content="2026-11-18T12:00:00-05:00" />
+<meta name="description" content="A practitioner's playbook for inverse probability of treatment weighting (IPTW): how the weights work, how to check balance, how to handle extreme weights, and how to fit marginal structural models and doubly robust estimators." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danieljordanviray.github.io/applied-data-science-lab/causal-inference/inverse-probability-of-treatment-weighting/inverse-probability-of-treatment-weighting.html" />
+<meta property="og:title" content="Inverse Probability of Treatment Weighting (IPTW): The Practitioner's Playbook" />
+<meta property="og:description" content="How IPTW rebuilds a randomized trial inside observational data — weights, balance checks, extreme values, marginal structural models, doubly robust estimators, and a full time-varying worked example." />
+<meta property="og:image" content="https://danieljordanviray.github.io/applied-data-science-lab/causal-inference/inverse-probability-of-treatment-weighting/og-image.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Inverse Probability of Treatment Weighting (IPTW): The Practitioner's Playbook" />
+<meta name="twitter:description" content="A friendly, first-principles refresher on IPTW for data scientists and clinical researchers." />
+<meta name="twitter:image" content="https://danieljordanviray.github.io/applied-data-science-lab/causal-inference/inverse-probability-of-treatment-weighting/og-image.jpg" />
+<link rel="icon" href="data:," />
+<title>Inverse Probability of Treatment Weighting (IPTW): The Practitioner's Playbook</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Inverse Probability of Treatment Weighting (IPTW): The Practitioner's Playbook",
+  "description": "A practitioner's playbook for inverse probability of treatment weighting (IPTW): how the weights work, how to check balance, how to handle extreme weights, and how to fit marginal structural models and doubly robust estimators.",
+  "image": "https://danieljordanviray.github.io/applied-data-science-lab/causal-inference/inverse-probability-of-treatment-weighting/og-image.jpg",
+  "datePublished": "2026-11-18T12:00:00-05:00",
+  "author": {
+    "@type": "Person",
+    "name": "Daniel Jordan Viray",
+    "url": "https://danieljordanviray.com",
+    "sameAs": [
+      "https://www.linkedin.com/in/danieljordanviray",
+      "https://github.com/danieljordanviray"
+    ]
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800;1,6..12,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#fdfaf3;
+    --surface:#ffffff;
+    --ink:#26332f;
+    --ink-soft:#4c5d57;
+    --muted:#71827b;
+    --line:#e7dfcf;
+    --teal:#0e7a6d;
+    --teal-dark:#0a5c53;
+    --teal-tint:#e6f4f1;
+    --orange:#d95f26;
+    --orange-tint:#fdeee3;
+    --blue:#2b6cb0;
+    --blue-tint:#e8f1fa;
+    --amber:#9a6a12;
+    --amber-tint:#fdf3d7;
+    --rose-tint:#fbecec;
+    --green-band:#dff2e4;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(38,51,47,.05),0 8px 24px rgba(38,51,47,.06);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Nunito Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:17px;line-height:1.68;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,[role="button"],select,summary,input:not([type="checkbox"],[type="radio"]){min-height:2rem}
+  .wrap{max-width:860px;margin:0 auto;padding:0 20px 80px}
+  /* ---------- header ---------- */
+  header.top{padding:44px 0 8px}
+  .date{font-weight:700;color:var(--teal-dark);font-size:15px;letter-spacing:.02em;margin:0}
+  .byline{margin:2px 0 0;color:var(--ink-soft);font-size:15px}
+  h1{
+    font-family:"Lora",Georgia,serif;font-weight:700;
+    font-size:clamp(30px,5.4vw,44px);line-height:1.18;margin:16px 0 14px;color:#1d2a26;
+  }
+  .lede{font-size:19px;line-height:1.6;color:var(--ink-soft);margin:0 0 8px;max-width:46em}
+  .lede strong{color:var(--ink)}
+  /* ---------- TOC ---------- */
+  nav.toc{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:22px 24px 10px;margin:26px 0 10px;
+  }
+  nav.toc h2{font-family:"Lora",Georgia,serif;font-size:19px;margin:0 0 6px;color:#1d2a26}
+  nav.toc .part{font-size:12.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);margin:16px 0 4px}
+  nav.toc ol{margin:0;padding:0;list-style:none;counter-reset:toc}
+  nav.toc li{counter-increment:toc;border-top:1px dashed #efe7d6}
+  nav.toc li:first-child{border-top:none}
+  nav.toc a{
+    display:flex;gap:12px;align-items:baseline;padding:9px 4px;min-height:40px;
+    color:var(--ink);text-decoration:none;font-weight:600;font-size:15.5px;border-radius:8px;
+  }
+  nav.toc a::before{content:counter(toc,decimal-leading-zero);font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--orange);font-weight:500;flex:none}
+  nav.toc a:hover{background:var(--teal-tint);color:var(--teal-dark)}
+  @media(min-width:720px){ nav.toc .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 34px} }
+  /* ---------- sections ---------- */
+  section{scroll-margin-top:24px;margin-top:52px}
+  .part-banner{
+    display:flex;align-items:center;gap:14px;margin:64px 0 4px;
+  }
+  .part-banner .tag{
+    background:var(--teal);color:#fff;font-weight:800;font-size:13px;letter-spacing:.08em;
+    text-transform:uppercase;padding:7px 14px;border-radius:999px;flex:none;
+  }
+  .part-banner .rule{flex:1;height:2px;background:linear-gradient(90deg,var(--teal),transparent)}
+  .part-banner h2{font-family:"Lora",Georgia,serif;font-size:clamp(23px,4vw,29px);margin:0;color:#1d2a26}
+  h2.sec{
+    font-family:"Lora",Georgia,serif;font-weight:700;color:#1d2a26;
+    font-size:clamp(23px,4vw,29px);line-height:1.25;margin:0 0 14px;
+  }
+  h2.sec .no{color:var(--orange);font-family:"IBM Plex Mono",monospace;font-size:.62em;font-weight:500;display:block;margin-bottom:6px;letter-spacing:.04em}
+  h3{font-family:"Lora",Georgia,serif;font-size:20px;font-weight:600;color:#1d2a26;margin:30px 0 8px}
+  h4{font-size:16.5px;font-weight:800;color:var(--teal-dark);margin:24px 0 6px}
+  p{margin:0 0 14px}
+  ul,ol{margin:0 0 14px;padding-left:24px}
+  li{margin-bottom:7px}
+  li::marker{color:var(--teal);font-weight:700}
+  strong{color:#1d2a26}
+  .term{color:var(--teal-dark);font-weight:700}
+  em{color:inherit}
+  a{color:var(--teal-dark)}
+  /* ---------- cards & callouts ---------- */
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:20px 22px;margin:20px 0;
+  }
+  .card h3,.card h4{margin-top:0}
+  .callout{border-radius:var(--radius);padding:16px 20px;margin:20px 0;border:1px solid}
+  .callout p:last-child{margin-bottom:0}
+  .callout .label{font-weight:800;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:6px}
+  .callout.teal{background:var(--teal-tint);border-color:#bfe0d9}
+  .callout.teal .label{color:var(--teal-dark)}
+  .callout.amber{background:var(--amber-tint);border-color:#ecd9a0}
+  .callout.amber .label{color:var(--amber)}
+  .callout.orange{background:var(--orange-tint);border-color:#f3cdb2}
+  .callout.orange .label{color:var(--orange)}
+  .callout.blue{background:var(--blue-tint);border-color:#bfd7ef}
+  .callout.blue .label{color:var(--blue)}
+  /* ---------- formulas ---------- */
+  .formula{
+    background:#fffdf7;border:1px solid var(--line);border-left:5px solid var(--teal);
+    border-radius:10px;padding:16px 20px;margin:18px 0;text-align:center;
+    font-family:"Lora",Georgia,serif;font-size:19px;line-height:1.7;overflow-x:auto;
+  }
+  .formula.left{text-align:left;font-size:17.5px}
+  .formula .fnote{display:block;font-family:"Nunito Sans",sans-serif;font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .frac{display:inline-block;vertical-align:middle;text-align:center;margin:0 .18em}
+  .frac .num{display:block;border-bottom:1.6px solid currentColor;padding:0 .35em .08em;line-height:1.25}
+  .frac .den{display:block;padding:.08em .35em 0;line-height:1.25}
+  sub,sup{font-size:.68em}
+  .math{font-family:"Lora",Georgia,serif;font-style:italic}
+  /* ---------- tables ---------- */
+  .table-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin:20px 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-card .cap{padding:14px 20px 0;font-weight:800;font-size:15px;color:#1d2a26}
+  .table-card .cap small{display:block;font-weight:600;color:var(--muted);font-size:13px;margin-top:2px}
+  table{border-collapse:collapse;width:100%;font-size:15px}
+  th,td{padding:10px 14px;text-align:left;vertical-align:top}
+  thead th{background:var(--teal-tint);color:var(--teal-dark);font-weight:800;font-size:13.5px;border-bottom:2px solid #bfe0d9}
+  tbody tr{border-top:1px solid #f0e9d8}
+  tbody tr.total{background:#fff8ea;font-weight:800}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.ctr,th.ctr{text-align:center}
+  .good{color:var(--teal-dark);font-weight:800}
+  .bad{color:#b3401e;font-weight:800}
+  figure{margin:22px 0}
+  figure img{width:100%;height:auto;border-radius:var(--radius);border:1px solid var(--line);display:block}
+  figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;line-height:1.55}
+  .chart-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 18px 10px;margin:20px 0}
+  .chart-card .ct{font-weight:800;font-size:15px;color:#1d2a26;margin:0 4px 2px}
+  .chart-card .cs{font-size:13.5px;color:var(--muted);margin:0 4px 8px}
+  .chart-card svg{width:100%;height:auto;display:block}
+  /* ---------- interactive ---------- */
+  .explorer{background:linear-gradient(180deg,#ffffff,#fffaf0);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin:22px 0}
+  .explorer h3{margin-top:0}
+  .explorer input[type=range]{width:100%;accent-color:var(--teal);min-height:36px;cursor:pointer}
+  .ex-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+  @media(max-width:560px){.ex-grid{grid-template-columns:1fr}}
+  .ex-box{border-radius:12px;padding:14px 16px;border:1px solid}
+  .ex-box.t{background:var(--teal-tint);border-color:#bfe0d9}
+  .ex-box.c{background:var(--orange-tint);border-color:#f3cdb2}
+  .ex-box .big{font-family:"Lora",Georgia,serif;font-size:30px;font-weight:700;line-height:1.1}
+  .ex-box .lab{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+  .ex-box p{font-size:14px;margin:6px 0 0;color:var(--ink-soft)}
+  .pi-read{font-family:"IBM Plex Mono",monospace;font-weight:500}
+  .seg{display:inline-flex;background:#f1ead9;border-radius:999px;padding:4px;gap:4px;margin:4px 0 10px}
+  .seg button{
+    border:none;background:transparent;border-radius:999px;padding:8px 16px;min-height:38px;
+    font-family:inherit;font-weight:700;font-size:14px;color:var(--ink-soft);cursor:pointer;
+  }
+  .seg button[aria-pressed="true"]{background:var(--teal);color:#fff}
+  .steps{display:grid;gap:12px;margin:18px 0}
+  @media(min-width:680px){.steps{grid-template-columns:repeat(3,1fr)}}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .step .n{font-family:"IBM Plex Mono",monospace;color:var(--orange);font-size:13px;font-weight:500}
+  .step h4{margin:4px 0 6px;color:#1d2a26;font-family:"Lora",Georgia,serif;font-size:17px}
+  .step p{font-size:14.5px;margin:0;color:var(--ink-soft)}
+  .checklist{list-style:none;padding-left:0}
+  .checklist li{padding-left:30px;position:relative}
+  .checklist li::before{content:"✓";position:absolute;left:2px;top:0;color:var(--teal);font-weight:800}
+  footer{margin-top:70px;border-top:2px solid var(--line);padding-top:22px;color:var(--muted);font-size:14.5px}
+  .notes{background:#fffdf7;border:1px dashed #d8cba6;border-radius:var(--radius);padding:20px 22px;margin-top:56px}
+  .notes h2{font-family:"Lora",Georgia,serif;font-size:21px;margin:0 0 10px;color:#1d2a26}
+  .notes li{font-size:15px}
+  @media(max-width:640px){
+    body{font-size:16px}
+    .wrap{padding:0 14px 60px}
+    th,td{padding:8px 9px;font-size:13.5px}
+    .formula{font-size:16.5px;padding:14px 12px}
+    .card,.callout,.explorer{padding:16px}
+    nav.toc{padding:18px 16px 6px}
+  }
+  @media print{
+    body{background:#fff}
+    nav.toc,.explorer .seg{display:none}
+    .card,.table-card,.chart-card,.explorer{box-shadow:none}
+    section{margin-top:34px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <p class="date">November 18, 2026</p>
+  <p class="byline">Author: Daniel Jordan Viray</p>
+  <h1>Inverse Probability of Treatment Weighting (IPTW): The Practitioner's Playbook</h1>
+</header>
+<nav class="toc" aria-label="Table of Contents">
+  <h2>Table of Contents</h2>
+  <div class="cols">
+    <div>
+      <p class="part">Part I · IPTW fundamentals</p>
+      <ol>
+        <li><a href="#what-is-iptw">What is IPTW?</a></li>
+        <li><a href="#stochastic-balance">How IPTW restores stochastic balance in the observational data</a></li>
+        <li><a href="#breaks-the-link">How IPTW breaks the link between confounders and treatment</a></li>
+        <li><a href="#why-iptw">Why use IPTW over other causal inference methods?</a></li>
+        <li><a href="#potential-outcomes">Intuition on how IPTW allows us to calculate potential outcomes</a></li>
+        <li><a href="#calculate-weights">How to calculate the weights for IPTW</a></li>
+        <li><a href="#check-balance">How to check for balance</a></li>
+        <li><a href="#assumptions">A quick reminder on the assumptions: exchangeability and positivity</a></li>
+        <li><a href="#extreme-values">Handling extreme values</a></li>
+      </ol>
+    </div>
+    <div>
+      <p class="part">Part II · Modeling using IPTW data</p>
+      <ol start="10" style="counter-reset:toc 9">
+        <li><a href="#msm">Intuition on marginal structural models</a></li>
+        <li><a href="#two-model">The two-model workflow: propensity scores vs. marginal structural models</a></li>
+        <li><a href="#doubly-robust">Intuition on doubly robust estimators</a></li>
+        <li><a href="#time-varying">Worked example of time-varying analysis with IPTW</a></li>
+      </ol>
+    </div>
+  </div>
+</nav>
+<div class="part-banner"><span class="tag">Part I</span><h2>IPTW fundamentals</h2><span class="rule"></span></div>
+<!-- ================= 1 ================= -->
+<section id="what-is-iptw">
+  <h2 class="sec"><span class="no">01</span>What is IPTW?</h2>
+  <p>Inverse probability of treatment weighting (IPTW) is a causal inference method that restores balance between the treatment and control groups <span class="term">[covariate balance]</span> by equalizing the weighted number of subjects within each subgroup of covariates.</p>
+</section>
+<!-- ================= 2 ================= -->
+<section id="stochastic-balance">
+  <h2 class="sec"><span class="no">02</span>How IPTW restores stochastic balance in the observational data</h2>
+  <p>Let's start with an example. Say we have observational data with 30 people. We have measurements for one covariate — smoking status — and whether they were in the treatment or control group.</p>
+  <p>We summarize the data, and observe the following:</p>
+  <div class="table-card">
+    <p class="cap">Raw observed data<small>30 real people, exactly as they showed up in the data</small></p>
+    <table>
+      <thead><tr><th>Smoking status</th><th class="num">Treatment, n (%)</th><th class="num">Control, n (%)</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        <tr><td>Smoker</td><td class="num">1 (16.7%)</td><td class="num">9 (37.5%)</td><td class="num">10</td></tr>
+        <tr><td>Non-smoker</td><td class="num">5 (83.3%)</td><td class="num">15 (62.5%)</td><td class="num">20</td></tr>
+        <tr class="total"><td>Total</td><td class="num">6 (100%)</td><td class="num">24 (100%)</td><td class="num">30</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Three things are off here:</p>
+  <ol>
+    <li><strong>Each covariate profile is <em>not</em> evenly split between treatment and control</strong> — 1 treated / 9 control for smokers, and 5 treated / 15 control for non-smokers.</li>
+    <li><strong>The total number of subjects in the treatment and control groups is <em>not</em> the same</strong> — 6 subjects in treatment, 24 in control.</li>
+    <li><strong>The distribution of smoking status is <em>not</em> the same (balanced) between the groups</strong> — 16.7% smokers / 83.3% non-smokers in the treatment group, versus 37.5% smokers / 62.5% non-smokers in the control group.</li>
+  </ol>
+  <p>Normally, in a 1:1 randomized controlled trial — where every subject has a 50/50 chance of landing in either group — we would expect those 10 smokers to split into 5 treated and 5 control, and those 20 non-smokers to split into 10 treated and 10 control.</p>
+  <p>The balanced table, if we could run a 1:1 randomized controlled trial, would look something like this:</p>
+  <div class="table-card">
+    <p class="cap">Data if we could run a 1:1 randomized controlled trial<small>The world we're trying to recreate</small></p>
+    <table>
+      <thead><tr><th>Smoking status</th><th class="num">Treatment, n (%)</th><th class="num">Control, n (%)</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        <tr><td>Smoker</td><td class="num">5 (33.3%)</td><td class="num">5 (33.3%)</td><td class="num">10</td></tr>
+        <tr><td>Non-smoker</td><td class="num">10 (66.7%)</td><td class="num">10 (66.7%)</td><td class="num">20</td></tr>
+        <tr class="total"><td>Total</td><td class="num">15 (100%)</td><td class="num">15 (100%)</td><td class="num">30</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Notice how:</p>
+  <ol>
+    <li>Each covariate profile <strong>is</strong> evenly split — 5 / 5 for smokers, 10 / 10 for non-smokers.</li>
+    <li>The group totals <strong>are</strong> the same — 15 subjects in treatment, 15 in control.</li>
+    <li>The distribution of smoking status <strong>is</strong> the same in both groups — 33.3% smokers / 66.7% non-smokers in each.</li>
+  </ol>
+  <p>Through IPTW, we essentially want to recreate what we would see in a 1:1 randomized controlled trial. I'll go over the mathematical mechanics shortly, but essentially we mathematically weight the subjects in the treatment and control groups so that our <span class="term">[pseudo-population]</span> — meaning our effective population after applying the weights — looks like this:</p>
+  <div class="table-card">
+    <p class="cap">Data when we use IPTW on the raw observational data<small>Weighted counts — nobody new was enrolled, everybody just counts for more</small></p>
+    <table>
+      <thead><tr><th>Smoking status</th><th class="num">Treatment, weighted n (%)</th><th class="num">Control, weighted n (%)</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        <tr><td>Smoker</td><td class="num">10 (33.3%)</td><td class="num">10 (33.3%)</td><td class="num">20</td></tr>
+        <tr><td>Non-smoker</td><td class="num">20 (66.7%)</td><td class="num">20 (66.7%)</td><td class="num">40</td></tr>
+        <tr class="total"><td>Total</td><td class="num">30 (100%)</td><td class="num">30 (100%)</td><td class="num">60</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Notice how:</p>
+  <ol>
+    <li>Each covariate profile is evenly split — 10 / 10 for smokers, 20 / 20 for non-smokers.</li>
+    <li>The group totals are the same — 30 weighted subjects in treatment, 30 in control.</li>
+    <li>The distribution of smoking status is the same in both groups — 33.3% / 66.7% in each.</li>
+    <li>Both the treatment and control groups are each weighted up to the full population of subjects in the raw observational data.</li>
+  </ol>
+  <div class="callout teal">
+    <span class="label">Why "pseudo"?</span>
+    <p>We call it a pseudo-population because the total effective population is <strong>60</strong>, when in fact we only had <strong>30</strong> real subjects in our observational data. But our pseudo-population now looks like what we would see in a 1:1 randomized controlled trial — and that resemblance is the whole point.</p>
+  </div>
+</section>
+<!-- ================= 3 ================= -->
+<section id="breaks-the-link">
+  <h2 class="sec"><span class="no">03</span>How IPTW breaks the link between confounders and treatment</h2>
+  <p>What does it actually mean mathematically when we say that IPTW "removes confounding" by creating stochastic balance <span class="term">[stochastic balance]</span>?</p>
+  <p>In causal inference, a baseline variable <span class="math">L</span> (like smoking status or severity of illness) acts as a <span class="term">[confounder]</span> when it influences both who gets the treatment (<span class="math">A</span>) and the final health outcome (<span class="math">Y</span>). Because <span class="math">L</span> influences treatment assignment, there is a statistical link between the confounder and the treatment: <strong>knowing a patient's covariate profile gives you information about how likely they are to receive the drug.</strong></p>
+  <p>We can see this link clearly in our raw observational data:</p>
+  <ul>
+    <li>If we know a patient is a <strong>smoker</strong>, their probability of receiving treatment is 1/10 = <strong>0.10</strong>.</li>
+    <li>If we know a patient is a <strong>non-smoker</strong>, their probability of receiving treatment jumps to 5/20 = <strong>0.25</strong>.</li>
+  </ul>
+  <p>Because 0.10 ≠ 0.25, treatment assignment is <em>dependent</em> on smoking status. If you know whether someone smokes, you can better predict whether they got the drug. In the language of causal diagrams, there is an arrow pointing from the confounder to the treatment (<span class="math">L → A</span>).</p>
+  <p>Now look at what happens after we apply our IPTW weights to create the pseudo-population:</p>
+  <ul>
+    <li>Among <strong>smokers</strong>, there are 10 weighted treated subjects out of 20 total weighted smokers. The probability of receiving treatment is 10/20 = <strong>0.50</strong>.</li>
+    <li>Among <strong>non-smokers</strong>, there are 20 weighted treated subjects out of 40 total weighted non-smokers. The probability of receiving treatment is 20/40 = <strong>0.50</strong>.</li>
+  </ul>
+  <div class="formula">
+    P(<span class="math">A</span> = 1 | smoker) = P(<span class="math">A</span> = 1 | non-smoker) = 0.50 &nbsp;in the pseudo-population
+    <span class="fnote">In words: in the weighted data, the chance of treatment no longer depends on the covariate profile.</span>
+  </div>
+  <p>In the weighted pseudo-population, <strong>knowing a patient's covariate profile gives you zero information about whether they received the treatment.</strong> Whether a patient is a smoker or a non-smoker, sick or healthy, they have the exact same 50/50 chance of being in the treatment group or the control group.</p>
+  <p>One precision note: the 0.50 here is this example's number — each group is scaled to the full population, so the split lands at 50/50. The general claim is the <em>equality</em>, not the 0.50: after weighting, the probability of treatment no longer varies with the covariate profile.</p>
+  <p>By equalizing the treatment probabilities across every covariate profile, IPTW makes treatment statistically independent of the confounders <span class="term">[independence of treatment and confounders in the pseudo-population]</span>. Smoking will still affect a patient's heart attack risk (<span class="math">L → Y</span> is still there), but it no longer dictates who gets the drug (no more <span class="math">L → A</span>). By severing the link between the confounders and the treatment, IPTW eliminates selection bias <span class="term">[selection bias]</span> and lets us measure the pure causal effect of the drug.</p>
+</section>
+<!-- ================= 4 ================= -->
+<section id="why-iptw">
+  <h2 class="sec"><span class="no">04</span>Why use IPTW over other causal inference methods?</h2>
+  <p>Here are a few reasons why you would choose IPTW over other causal inference methods, such as matching:</p>
+  <h3>You don't want to discard data from your observational study</h3>
+  <p>Notice how, when we constructed our pseudo-population, we didn't throw out a single data point — we simply weighted subjects differently to restore balance between the treatment and control groups. By contrast, matching forces you to discard unmatched subjects (such as excess control subjects left over after pairing, or treated subjects with no close match in the control group).</p>
+  <h3>You want the effect for the whole population, not just the treated</h3>
+  <p>You want to calculate the <span class="term">[average treatment effect]</span> — the effect of the treatment across the entire population — rather than just the <span class="term">[average treatment effect on the treated]</span>, which is what standard matching targets.</p>
+  <p>In the real world, we only observe one outcome per person: we see what happened to the treatment group with the drug, and what happened to the control group without it. IPTW estimates the missing potential outcomes <span class="term">[potential outcomes]</span> by scaling each group up to represent the entire population:</p>
+  <ul>
+    <li><strong>What would happen if the entire population received treatment:</strong> we upweight the treated subjects within each covariate profile so they stand in for the control subjects who didn't get the drug, and take their weighted average outcome — which is simply the standard average calculated directly on the treated pseudo-population.</li>
+    <li><strong>What would happen if the entire population did not receive treatment:</strong> we upweight the control subjects within each covariate profile so they stand in for the treated subjects who took the drug, and take their weighted average outcome — the standard average calculated directly on the control pseudo-population.</li>
+  </ul>
+  <p>The average treatment effect is simply the difference between those two weighted averages: the expected outcome if all subjects in the population received treatment minus the expected outcome if all subjects did not receive treatment.</p>
+  <div class="formula">
+    ATE = E[<span class="math">Y</span><sup>1</sup>] − E[<span class="math">Y</span><sup>0</sup>]
+    <span class="fnote"><span class="math">Y</span><sup>1</sup> is the outcome a person would have if treated; <span class="math">Y</span><sup>0</sup> is the outcome they would have if not treated. We never see both for the same person — IPTW reconstructs both averages at the population level.</span>
+  </div>
+  <h3>You are running a time-varying analysis</h3>
+  <p>You are running a time-varying analysis, where treatment at time 0 changes a patient's covariates at time 1, which in turn affects whether they receive treatment at time 1 <span class="term">[treatment–confounder feedback]</span>. Matching and ordinary regression adjustment break down here; IPTW doesn't. We work a full example of this in <a href="#time-varying">section 13</a>.</p>
+</section>
+<!-- ================= 5 ================= -->
+<section id="potential-outcomes">
+  <h2 class="sec"><span class="no">05</span>Intuition on how IPTW allows us to calculate potential outcomes</h2>
+  <p>In an observational study, we face the fundamental problem of causal inference <span class="term">[fundamental problem of causal inference]</span>: for any single patient, we only observe <strong>one</strong> potential outcome. If they took the drug, we observe <span class="math">Y</span><sup>1</sup>, and their untreated outcome <span class="math">Y</span><sup>0</sup> is missing. If they didn't take the drug, we observe <span class="math">Y</span><sup>0</sup>, and their treated outcome <span class="math">Y</span><sup>1</sup> is missing.</p>
+  <p>IPTW doesn't guess the missing outcome for each individual person one by one. Instead, it fills in the missing outcomes <strong>at the covariate-group (and population) level</strong> using the weights:</p>
+  <ol>
+    <li><strong>Estimating what would have happened if <em>everyone</em> received treatment (E[<span class="math">Y</span><sup>1</sup>]):</strong> Suppose in a specific covariate profile of 10 patients, only 2 received the drug and 8 were in the control group. For those 8 control patients, we are missing what would have happened if they <em>had</em> taken the drug. By giving each of the 2 treated patients a weight of 1/0.2 = 5, those 2 treated patients now count as 2 × 5 = 10 patients in our pseudo-population. Their observed outcomes stand in for both themselves <em>and</em> the 8 control patients with the exact same covariate profile whose treated outcomes were missing. Taking the weighted average of the treatment group — which is simply the <strong>standard average calculated directly on the treated pseudo-population</strong> (e.g., total weighted heart attacks divided by total weighted patients) — gives us the expected outcome if the entire population had been treated.</li>
+    <li><strong>Estimating what would have happened if <em>no one</em> received treatment (E[<span class="math">Y</span><sup>0</sup>]):</strong> In that same 10-patient profile, 8 patients did not receive the drug, while the 2 treated patients are missing their untreated outcomes. By giving each of the 8 control patients a weight of 1/(1 − 0.2) = 1.25, those 8 control patients now count as 8 × 1.25 = 10 patients in our pseudo-population — standing in for both themselves <em>and</em> the 2 treated patients. Taking the weighted average of the control group — that is, the <strong>standard average calculated directly on the control pseudo-population</strong> — gives us the expected outcome if the entire population had gone untreated.</li>
+    <li><strong>Calculating the ATE:</strong> Once both groups are weighted up to represent the full population, you simply take the weighted average outcome of the treatment group minus the weighted average outcome of the control group — in other words, <strong>the standard average outcome in the treated pseudo-population minus the standard average outcome in the control pseudo-population</strong>.</li>
+  </ol>
+  <div class="callout teal">
+    <span class="label">The one idea to keep</span>
+    <p>Each treated person counts for themselves plus the similar people who <em>didn't</em> get treated. Each control person counts for themselves plus the similar people who <em>did</em>. That's the entire trick — everything else is machinery for doing it carefully.</p>
+  </div>
+</section>
+<!-- ================= 6 ================= -->
+<section id="calculate-weights">
+  <h2 class="sec"><span class="no">06</span>How to calculate the weights for IPTW</h2>
+  <p>Now let's actually run through the mathematics for how we calculated this weighted population:</p>
+  <div class="table-card">
+    <p class="cap">Mechanics of calculating the weights and the pseudo-population<small>π is the propensity score — the probability of treatment within that covariate profile</small></p>
+    <table>
+      <thead><tr>
+        <th>Smoking status</th><th class="num">Treated, n</th><th class="num">Control, n</th><th class="num">π = P(treatment)</th>
+        <th class="num">Treatment weight (1/π)</th><th class="num">Treated, weighted n</th>
+        <th class="num">Control weight (1/(1−π))</th><th class="num">Control, weighted n</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>Smoker</td><td class="num">1</td><td class="num">9</td><td class="num">1/10 = 0.10</td><td class="num">10</td><td class="num">1 × 10 = 10</td><td class="num">10/9 ≈ 1.11</td><td class="num">9 × 10/9 = 10</td></tr>
+        <tr><td>Non-smoker</td><td class="num">5</td><td class="num">15</td><td class="num">5/20 = 0.25</td><td class="num">4</td><td class="num">5 × 4 = 20</td><td class="num">20/15 ≈ 1.33</td><td class="num">15 × 20/15 = 20</td></tr>
+        <tr class="total"><td>Total</td><td class="num">6</td><td class="num">24</td><td class="num">—</td><td class="num">—</td><td class="num">30</td><td class="num">—</td><td class="num">30</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ol>
+    <li>First, for each covariate profile <span class="math">L</span>, we calculate the <span class="term">[propensity score]</span> — the probability that a subject with that covariate profile receives treatment: π(<span class="math">L</span>) = P(<span class="math">A</span> = 1 | <span class="math">L</span>). For example, look at the covariate profile of smokers: one in ten smokers is treated, so the propensity score for subjects with that profile is 0.10.</li>
+    <li>For the treated population, the weight for each subject is 1/π.</li>
+    <li>For the control population, the weight for each subject is 1/(1 − π).</li>
+    <li>Finally, we multiply each subject by their appropriate weight and sum the new weighted counts across the treatment and control groups.</li>
+  </ol>
+  <p>This is how we ended with 30 weighted control subjects and 30 weighted treatment subjects, for a total balanced pseudo-population of 60.</p>
+  <div class="formula">
+    Weight = <span class="frac"><span class="num"><span class="math">A</span></span><span class="den">π(<span class="math">L</span>)</span></span> + <span class="frac"><span class="num">1 − <span class="math">A</span></span><span class="den">1 − π(<span class="math">L</span>)</span></span>
+    <span class="fnote">One formula, both groups: if you were treated (<span class="math">A</span> = 1) the second term vanishes and your weight is 1/π; if you were control (<span class="math">A</span> = 0) the first term vanishes and your weight is 1/(1 − π). In words: <strong>one divided by the probability of the treatment you actually received.</strong></span>
+  </div>
+  <div class="explorer" id="weight-explorer">
+    <h3>Try it: the weight explorer</h3>
+    <p>Drag the propensity score π and watch the two weights move. Notice what happens near the edges — that's the extreme-weights problem from <a href="#extreme-values">section 9</a>, arriving early.</p>
+    <label for="pi-slider" style="font-weight:700">Propensity score π = <span class="pi-read" id="pi-read">0.20</span></label>
+    <input type="range" id="pi-slider" min="1" max="99" value="20" step="1" aria-label="Propensity score" />
+    <div class="ex-grid">
+      <div class="ex-box t">
+        <span class="lab" style="color:var(--teal-dark)">If treated · weight = 1/π</span>
+        <div class="big" id="w-treated">5.00</div>
+        <p id="w-treated-note">Each treated person counts as 5 people in the pseudo-population.</p>
+      </div>
+      <div class="ex-box c">
+        <span class="lab" style="color:var(--orange)">If control · weight = 1/(1−π)</span>
+        <div class="big" id="w-control">1.25</div>
+        <p id="w-control-note">Each control person counts as 1.25 people in the pseudo-population.</p>
+      </div>
+    </div>
+    <p style="margin-top:12px;font-size:14.5px;color:var(--ink-soft)" id="ex-warn">At π = 0.20 this is our 10-patient profile from section 5: 2 treated × 5 = 10, and 8 controls × 1.25 = 10. Balanced.</p>
+  </div>
+  <h3>In the real world</h3>
+  <ul>
+    <li>In real observational data, when there are many covariates and each subject has a unique covariate profile, there will likely be only one subject with that exact profile. So we can't calculate propensity scores by simple subgroup fractions like in the table above. Instead, to get the probability of treatment, we fit a logistic regression model <span class="term">[propensity score model]</span> (or another classification model).</li>
+    <li>Using that model, we predict a propensity score π for each subject — their individual probability of receiving treatment given their covariates.</li>
+    <li>Then, to get the weight for each subject, we apply the appropriate formula based on which group we observed them in: 1/π if they are in the treatment group, or 1/(1 − π) if they are in the control group.</li>
+  </ul>
+</section>
+<!-- ================= 7 ================= -->
+<section id="check-balance">
+  <h2 class="sec"><span class="no">07</span>How to check for balance</h2>
+  <p>One way to check for balance in the pseudo-population is to create a Table 1 (which is covered in other blog posts). But essentially, we look at the <span class="term">[standardized mean difference]</span> between the treatment and the control group for each of the covariates, before and after the weighting.</p>
+  <p>Recall that the standardized mean difference is essentially the difference in means between the treatment and the control group, divided by their pooled standard deviation — and we take the absolute value, because we care about the <em>size</em> of the imbalance, not its direction:</p>
+  <div class="formula">
+    |SMD| = <span class="frac"><span class="num">| mean<sub>treated</sub> − mean<sub>control</sub> |</span><span class="den">pooled SD</span></span>
+    &nbsp;&nbsp;where&nbsp;&nbsp; pooled SD = √<span style="text-decoration:overline">&nbsp;(s<sub>t</sub>² + s<sub>c</sub>²) / 2&nbsp;</span>
+    <span class="fnote">For a yes/no covariate (like smoker), use proportions instead of means: pooled SD = √[ (p<sub>t</sub>(1 − p<sub>t</sub>) + p<sub>c</sub>(1 − p<sub>c</sub>)) / 2 ]. Rule of thumb: |SMD| below 0.1 counts as balanced.</span>
+  </div>
+  <p>So it would look something like the table below. This is an <strong>illustrative example</strong> — a larger study than our 30-person toy, with 180 treated and 320 control patients:</p>
+  <div class="table-card">
+    <p class="cap">Balance before and after weighting — illustrative example<small>Treated n = 180 · Control n = 320. Continuous covariates shown as mean (SD); yes/no covariates as %.</small></p>
+    <table>
+      <thead><tr><th>Covariate</th><th class="num">Treated</th><th class="num">Control</th><th class="num">|SMD| before</th><th class="num">Treated, weighted</th><th class="num">Control, weighted</th><th class="num">|SMD| after</th></tr></thead>
+      <tbody>
+        <tr><td>Age, years</td><td class="num">62.4 (11.2)</td><td class="num">57.1 (10.6)</td><td class="num bad">0.486</td><td class="num">59.3</td><td class="num">59.0</td><td class="num good">0.028</td></tr>
+        <tr><td>Systolic blood pressure, mm Hg</td><td class="num">138 (18)</td><td class="num">130 (17)</td><td class="num bad">0.457</td><td class="num">133.2</td><td class="num">132.8</td><td class="num good">0.023</td></tr>
+        <tr><td>Smoker</td><td class="num">24%</td><td class="num">45%</td><td class="num bad">0.453</td><td class="num">33.8%</td><td class="num">33.3%</td><td class="num good">0.011</td></tr>
+        <tr><td>Diabetes</td><td class="num">38%</td><td class="num">22%</td><td class="num bad">0.355</td><td class="num">28.4%</td><td class="num">27.9%</td><td class="num good">0.011</td></tr>
+        <tr><td>Body mass index</td><td class="num">29.8 (5.4)</td><td class="num">28.3 (5.1)</td><td class="num bad">0.286</td><td class="num">28.9</td><td class="num">28.8</td><td class="num good">0.019</td></tr>
+        <tr><td>Male</td><td class="num">58%</td><td class="num">52%</td><td class="num bad">0.121</td><td class="num">54.5%</td><td class="num">54.0%</td><td class="num good">0.010</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Notice how the standardized mean difference decreased significantly after weighting the data — every covariate drops from well above the 0.1 line to well below it. We can also visualize this table in an SMD plot <span class="term">[Love plot]</span>:</p>
+  <div class="chart-card">
+    <p class="ct">Standardized mean differences before and after weighting</p>
+    <p class="cs">Covariates sorted by their unweighted |SMD|, largest first. The dashed line marks the 0.1 rule of thumb. Use the toggle to isolate a view.</p>
+    <div class="seg" role="group" aria-label="Love plot view">
+      <button type="button" data-view="both" aria-pressed="true">Before + after</button>
+      <button type="button" data-view="before" aria-pressed="false">Before only</button>
+      <button type="button" data-view="after" aria-pressed="false">After only</button>
+    </div>
+    <svg viewBox="0 0 640 300" role="img" aria-label="Love plot: absolute standardized mean differences before weighting (orange, 0.49 down to 0.12) and after weighting (teal, all below 0.03), with a dashed threshold line at 0.1">
+      <!-- threshold -->
+      <line x1="170" y1="18" x2="170" y2="262" stroke="#b3401e" stroke-width="1.6" stroke-dasharray="5 4"/>
+      <text x="170" y="280" text-anchor="middle" font-size="11.5" fill="#b3401e" font-weight="700">0.1 threshold</text>
+      <!-- axis ticks: x = 110 + SMD*600 ; 0->110, 0.1->170, 0.2->230, 0.3->290, 0.4->350, 0.5->410 -->
+      <g font-size="11" fill="#71827b">
+        <text x="110" y="280" text-anchor="middle">0</text>
+        <text x="230" y="280" text-anchor="middle">0.2</text>
+        <text x="290" y="280" text-anchor="middle">0.3</text>
+        <text x="350" y="280" text-anchor="middle">0.4</text>
+        <text x="410" y="280" text-anchor="middle">0.5</text>
+      </g>
+      <g stroke="#efe7d6"><line x1="110" y1="18" x2="110" y2="262"/><line x1="230" y1="18" x2="230" y2="262"/><line x1="290" y1="18" x2="290" y2="262"/><line x1="350" y1="18" x2="350" y2="262"/><line x1="410" y1="18" x2="410" y2="262"/></g>
+      <!-- rows y: 40,76,112,148,184,220 ; before x=110+SMD*600, after same -->
+      <g font-size="13.5" fill="#26332f" font-weight="600">
+        <text x="100" y="45" text-anchor="end">Age</text>
+        <text x="100" y="81" text-anchor="end">Systolic BP</text>
+        <text x="100" y="117" text-anchor="end">Smoker</text>
+        <text x="100" y="153" text-anchor="end">Diabetes</text>
+        <text x="100" y="189" text-anchor="end">BMI</text>
+        <text x="100" y="225" text-anchor="end">Male</text>
+      </g>
+      <g id="love-lines" stroke="#0e7a6d" stroke-width="2" opacity="0.45">
+        <line x1="402" y1="40" x2="127" y2="40"/><line x1="384" y1="76" x2="124" y2="76"/><line x1="382" y1="112" x2="117" y2="112"/>
+        <line x1="323" y1="148" x2="117" y2="148"/><line x1="282" y1="184" x2="121" y2="184"/><line x1="183" y1="220" x2="116" y2="220"/>
+      </g>
+      <g id="love-after">
+        <g fill="#0e7a6d">
+          <circle cx="127" cy="40" r="6"><title>Age after weighting: 0.028</title></circle>
+          <circle cx="124" cy="76" r="6"><title>Systolic BP after weighting: 0.023</title></circle>
+          <circle cx="117" cy="112" r="6"><title>Smoker after weighting: 0.011</title></circle>
+          <circle cx="117" cy="148" r="6"><title>Diabetes after weighting: 0.011</title></circle>
+          <circle cx="121" cy="184" r="6"><title>BMI after weighting: 0.019</title></circle>
+          <circle cx="116" cy="220" r="6"><title>Male after weighting: 0.010</title></circle>
+        </g>
+        <g font-size="11.5" fill="#0a5c53" font-weight="700">
+          <text x="139" y="44">0.028</text><text x="136" y="80">0.023</text><text x="129" y="116">0.011</text>
+          <text x="129" y="152">0.011</text><text x="133" y="188">0.019</text><text x="128" y="224">0.010</text>
+        </g>
+      </g>
+      <g id="love-before">
+        <g fill="#d95f26">
+          <circle cx="402" cy="40" r="6"><title>Age before weighting: 0.486</title></circle>
+          <circle cx="384" cy="76" r="6"><title>Systolic BP before weighting: 0.457</title></circle>
+          <circle cx="382" cy="112" r="6"><title>Smoker before weighting: 0.453</title></circle>
+          <circle cx="323" cy="148" r="6"><title>Diabetes before weighting: 0.355</title></circle>
+          <circle cx="282" cy="184" r="6"><title>BMI before weighting: 0.286</title></circle>
+          <circle cx="183" cy="220" r="6"><title>Male before weighting: 0.121</title></circle>
+        </g>
+        <g font-size="11.5" fill="#b34a1a" font-weight="700">
+          <text x="414" y="44">0.486</text><text x="396" y="80">0.457</text><text x="394" y="116">0.453</text>
+          <text x="335" y="152">0.355</text><text x="294" y="188">0.286</text><text x="195" y="224">0.121</text>
+        </g>
+      </g>
+      <g font-size="12.5" font-weight="700">
+        <circle cx="470" cy="26" r="6" fill="#d95f26"/><text x="482" y="30" fill="#26332f">Before weighting</text>
+        <circle cx="470" cy="48" r="6" fill="#0e7a6d"/><text x="482" y="52" fill="#26332f">After weighting</text>
+      </g>
+      <text x="260" y="297" text-anchor="middle" font-size="11.5" fill="#71827b">Absolute standardized mean difference</text>
+    </svg>
+  </div>
+  <h3>What happens if you don't see balance after weighting?</h3>
+  <p>You might need to go back to the propensity score model — the logistic regression model that determines the weights — and refine it. For example, by including covariates that were not included the first time but are actually needed, or by adding interactions or flexible terms. It isn't cheating to refine the propensity model at this stage, because we haven't looked at the outcomes yet.</p>
+  <p>In general, you would tune and iterate the logistic regression model, then reassess balance to see how well the propensity scores are doing at achieving covariate balance. Balance first, outcomes second — that ordering is what keeps the process honest.</p>
+</section>
+<!-- ================= 8 ================= -->
+<section id="assumptions">
+  <h2 class="sec"><span class="no">08</span>A quick reminder on the assumptions: exchangeability and positivity</h2>
+  <p>Like all observational causal inference methods, IPTW relies on the <span class="term">[exchangeability]</span> (or <span class="term">[ignorability]</span>) assumption — meaning that our measured covariates <span class="math">L</span> fully capture all confounding, and there are no hidden, unmeasured confounders.</p>
+  <p>To see what exchangeability actually means in plain English, look back at our 10-patient covariate profile, where the propensity score of receiving the drug is 0.2 (2 patients got the treatment, and 8 were in the control group).</p>
+  <p><span class="term">[Conditional exchangeability]</span> simply says that within this specific covariate profile, <strong>every single one of those 10 patients had the exact same 20% likelihood of receiving the drug</strong>, and it was purely by chance that those specific 2 patients were the ones who got it. There is nothing secretly "special" or different about the 2 treated patients compared to the 8 control patients — meaning there are no hidden, unmeasured variables separating them, and you could freely swap (or <em>exchange</em>) any of the subjects within that profile.</p>
+  <p><strong>Why does this matter for IPTW?</strong> Remember that IPTW works by giving each of those 2 treated patients a weight of 5, so they count as 10 patients — standing in for both themselves and the 8 control patients whose treated outcomes are missing. That "stand-in" trick is only valid if those 2 treated patients are genuinely interchangeable with the other 8.</p>
+  <div class="callout amber">
+    <span class="label">⚠ If exchangeability is violated</span>
+    <p>Say those 2 specific patients were only given the drug because they had a severe, unrecorded symptom — a hidden confounder <span class="term">[unmeasured confounding]</span> that we didn't include in <span class="math">L</span>. Then they are <em>not</em> fair stand-ins for the 8 healthier control patients. By weighting those 2 secretly sicker patients up by 5, we aren't creating an unbiased pseudo-population — we are just multiplying that hidden, unmeasured bias by 5 across the entire group.</p>
+  </div>
+  <p>The second assumption is <span class="term">[positivity]</span>: every subject must have some chance — not zero, not one — of receiving either treatment or control, given their covariates: 0 &lt; π(<span class="math">L</span>) &lt; 1 for every covariate profile that occurs. If some profile is <em>always</em> treated, there is nobody in the control group to stand in for them, and no weighting scheme can fix that. Keep positivity in mind — it comes back, wearing a disguise, in the next section.</p>
+</section>
+<!-- ================= 9 ================= -->
+<section id="extreme-values">
+  <h2 class="sec"><span class="no">09</span>Handling extreme values</h2>
+  <p>Okay, so what happens when we have very large weights? And what can we do about it?</p>
+  <p>First, some intuition on why large weights happen: think of it as how <em>odd</em> that subject is, in terms of their propensity to receive treatment versus what they actually received. If a subject received treatment but their propensity to receive treatment was very low, that results in a very large weight. Similarly, if the propensity to receive treatment was very high but the subject was in the control group, that also results in a very large weight.</p>
+  <p>We can see this mathematically with the propensity score π. If they're in the treatment group, the weight is 1/π — so if π is very low but they're in the treatment group, the weight is going to be high. If the subject is in the control group, the weight is 1/(1 − π) — so if π is very high, the weight is also going to be very high. (Go back to the <a href="#weight-explorer">weight explorer</a> and push π toward 0.01 or 0.99 to feel this.)</p>
+  <p>This is a problem because very large weights distort the population, and therefore the estimated expected outcomes. Say one very odd subject contributes a pseudo-population of, let's say, 10,000 subjects. If we didn't have that subject in the study, we might only have a pseudo-population of 100 subjects. If we calculate the expected outcome including this very odd subject — who counts for 10,000 subjects in the pseudo-population — the expected outcome is going to skew very heavily toward the outcome of this one very odd subject.</p>
+  <p>Extreme weights are also a problem because they lead to larger standard errors. For intuition, think of bootstrapping <span class="term">[bootstrap]</span>, which is a way to estimate standard error: we take samples from the population with replacement, record our estimate, and repeat that <span class="math">B</span> times. The standard deviation of the distribution of those draws is basically the standard error. Now, if we have one subject who is worth 10,000 subjects, sometimes we're going to draw that subject in our bootstrap sample, and sometimes we're not. If we do draw them, the statistic we calculate skews heavily toward that subject; if we don't, the statistic will be essentially normal. The statistic for that sample really depends on whether this extremely heavy subject is in the sample or not — and you can see how including this heavy subject increases the standard deviation of the bootstrap distribution, compared to a world where the heavy subject did not exist.</p>
+  <div class="callout amber">
+    <span class="label">Positivity, almost violated</span>
+    <p>Recall that the <span class="term">[positivity]</span> assumption means the propensity to receive treatment is not deterministic — it is not 0 or 1. Any given subject in the population has some probability of receiving either treatment or control. Extreme weights mean the propensity score is very <em>close</em> to 0 or 1. It's not exactly 0 or 1, so positivity isn't technically violated — but it's getting very close.</p>
+  </div>
+  <h3>Step 1: Look at the distribution of your weights</h3>
+  <p>First, we want to quantify the problem by looking at the distribution of the weights. One way is to plot the distribution and just see the percentage or frequency of weights that are extreme:</p>
+  <div class="chart-card">
+    <p class="ct">Distribution of IPTW weights — illustrative example</p>
+    <p class="cs">Most patients carry small, well-behaved weights near 1–3. A long, thin tail stretches to the right.</p>
+    <svg viewBox="0 0 640 250" role="img" aria-label="Density plot of weights: a tall peak near weight 1 to 2 decaying quickly, with a long flat tail and a few isolated extreme weights near 45 to 50">
+      <path d="M60,215 C66,150 74,60 88,40 C100,24 112,44 124,78 C140,120 168,158 210,182 C270,205 360,213 460,215 L610,215 L60,215 Z" fill="#0e7a6d" opacity="0.75"/>
+      <g fill="#d95f26">
+        <rect x="556" y="128" width="5" height="87"/><rect x="578" y="96" width="5" height="119"/>
+        <rect x="596" y="150" width="5" height="65"/><rect x="606" y="118" width="5" height="97"/>
+      </g>
+      <line x1="60" y1="215" x2="615" y2="215" stroke="#c9bfa5" stroke-width="1.5"/>
+      <g font-size="11" fill="#71827b">
+        <text x="60" y="233">0</text><text x="165" y="233">10</text><text x="275" y="233">20</text>
+        <text x="385" y="233">30</text><text x="495" y="233">40</text><text x="600" y="233">50</text>
+        <text x="330" y="248" text-anchor="middle">Weight</text>
+      </g>
+      <text x="120" y="30" font-size="12.5" font-weight="700" fill="#0a5c53">Most weights live here</text>
+      <text x="470" y="80" font-size="12.5" font-weight="700" fill="#b34a1a">A few extreme weights →</text>
+      <line x1="540" y1="84" x2="580" y2="100" stroke="#b34a1a" stroke-width="1.2"/>
+    </svg>
+  </div>
+  <p>Another good plot: put each patient's rank on the x-axis and their weight on the y-axis, and you can see exactly where the weights start to become extreme:</p>
+  <div class="chart-card">
+    <p class="ct">Weights by rank — illustrative example</p>
+    <p class="cs">Sorted smallest to largest. Flat and boring for almost everyone — then a wall at the far right.</p>
+    <svg viewBox="0 0 640 250" role="img" aria-label="Rank versus weight plot: weights stay between 1 and about 5 for the first 480 of 500 patients, then spike sharply to 100">
+      <polyline points="60,208 200,205 350,200 480,192 540,185 562,172 578,142 590,96 597,56 602,38" fill="none" stroke="#0e7a6d" stroke-width="2.5"/>
+      <g fill="#d95f26"><circle cx="590" cy="96" r="4"/><circle cx="597" cy="56" r="4"/><circle cx="602" cy="38" r="4"/></g>
+      <line x1="60" y1="215" x2="615" y2="215" stroke="#c9bfa5" stroke-width="1.5"/>
+      <line x1="60" y1="35" x2="60" y2="215" stroke="#c9bfa5" stroke-width="1.5"/>
+      <g font-size="11" fill="#71827b">
+        <text x="60" y="233">0</text><text x="222" y="233">150</text><text x="384" y="233">300</text>
+        <text x="546" y="233">450</text><text x="330" y="248" text-anchor="middle">Patient rank (sorted by weight)</text>
+        <text x="48" y="40" text-anchor="end">100</text><text x="48" y="128" text-anchor="end">50</text><text x="48" y="218" text-anchor="end">0</text>
+      </g>
+      <text x="180" y="182" font-size="12.5" font-weight="700" fill="#0a5c53">Small, stable weights for ~97% of patients</text>
+      <text x="430" y="60" font-size="12.5" font-weight="700" fill="#b34a1a">The spike: a few patients carry the study</text>
+    </svg>
+  </div>
+  <p>Or you could use whichever method you like — summary statistics, box plots, or your favorite way of checking the distribution of any set of numbers.</p>
+  <h3>Step 2: Diagnose the root cause</h3>
+  <p>The first option is to pull out the rows with very high weights and check them manually for anything odd. For example: is it a data entry problem? Are the covariates nonsensical?</p>
+  <p>Or is there potentially a problem with the logistic regression model used to calculate the propensity scores? Here's one common reason for very high weights. Say there's one covariate, and let's call it covariate <span class="math">X</span>. The typical range of <span class="math">X</span> falls within −0.5 to 0.5 units — let's say 99.9% of the values in the observed dataset fall within that range. But then we observe one subject with <span class="math">X</span> = 10 units, well outside the typical range. After looking at it, we determine that 10 units is an anomaly, but it is valid in the dataset.</p>
+  <p>Our logistic regression model might be very good at predicting the probability of treatment when <span class="math">X</span> is within −0.5 to 0.5. But once <span class="math">X</span> becomes 10, the model basically has no information around that range, so it's not very good at predicting the propensity of treatment for that covariate profile. If you look at a logistic regression curve, −0.5 to 0.5 sits within the near-linear middle part of the S-curve. Out near the tails, where the curve flattens out, multiple curves can still fit the data well. At <span class="math">x</span> = 10, the propensity score could be 0.7, 0.8, 0.9, or 0.99 — all reasonable fits to the data at −0.5 to 0.5, but we're basically just guessing at the extreme. And of course, propensity scores of 0.7, 0.8, 0.9, and 0.99 would all affect that subject's weight drastically differently (a treated patient at π = 0.99 is fine; a <em>control</em> patient there gets weight 100).</p>
+  <div class="chart-card">
+    <p class="ct">Many logistic curves fit the data you have — and disagree about the data you don't</p>
+    <p class="cs">Four curves that are nearly identical where 99.9% of patients live (−0.5 to 0.5, shaded) fan out to very different propensity scores at x = 10.</p>
+    <svg viewBox="0 0 640 300" role="img" aria-label="Four logistic curves that run nearly on top of each other through the typical range from x minus 0.5 to 0.5, marked by dashed lines and dense rug marks, then fan out across an axis break to propensity scores of 0.7, 0.8, 0.9 and 0.99 at x equals 10, where there is a single lone data point">
+      <!-- typical-range band -->
+      <rect x="222" y="30" width="88" height="200" fill="#0e7a6d" opacity="0.10"/>
+      <!-- faint gridlines at key propensity values -->
+      <g stroke="#efe7d6" stroke-width="1">
+        <line x1="90" y1="130" x2="560" y2="130"/>
+        <line x1="90" y1="70" x2="560" y2="70"/>
+        <line x1="90" y1="50" x2="560" y2="50"/>
+        <line x1="90" y1="32" x2="560" y2="32"/>
+      </g>
+      <!-- logistic curves: coincident in the band, fanning out to the right -->
+      <g stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="90,174 134,168 178,164 222,154 266,126 310,98 350,94 428,92 507,91 560,90" stroke="#2b6cb0"/>
+        <polyline points="90,186 134,176 178,166 222,152 266,124 310,96 350,86 428,76 507,72 560,70" stroke="#0e7a6d"/>
+        <polyline points="90,200 134,186 178,170 222,150 266,122 310,94 350,74 428,58 507,52 560,50" stroke="#d95f26"/>
+        <polyline points="90,214 134,198 178,176 222,148 266,120 310,92 350,60 428,40 507,34 560,32" stroke="#b3401e"/>
+      </g>
+      <!-- endpoint values at x = 10 -->
+      <g font-size="12" font-weight="700">
+        <text x="568" y="94" fill="#2b6cb0">0.70</text><text x="568" y="74" fill="#0a5c53">0.80</text>
+        <text x="568" y="54" fill="#b34a1a">0.90</text><text x="568" y="36" fill="#b3401e">0.99</text>
+      </g>
+      <!-- single lone data point at x = 10 -->
+      <circle cx="560" cy="58" r="6.5" fill="#26332f" stroke="#ffffff" stroke-width="2"><title>One lone patient at x = 10</title></circle>
+      <!-- dashed lines bounding the typical range -->
+      <line x1="222" y1="22" x2="222" y2="230" stroke="#0a5c53" stroke-width="1.6" stroke-dasharray="6 4"/>
+      <line x1="310" y1="22" x2="310" y2="230" stroke="#0a5c53" stroke-width="1.6" stroke-dasharray="6 4"/>
+      <!-- axes -->
+      <line x1="90" y1="230" x2="575" y2="230" stroke="#c9bfa5" stroke-width="1.5"/>
+      <line x1="90" y1="30" x2="90" y2="230" stroke="#c9bfa5" stroke-width="1.5"/>
+      <!-- axis break on x-axis between 0.5 and 10 -->
+      <rect x="368" y="224" width="26" height="12" fill="#ffffff"/>
+      <g stroke="#71827b" stroke-width="1.8" stroke-linecap="round">
+        <line x1="374" y1="237" x2="382" y2="225"/>
+        <line x1="384" y1="237" x2="392" y2="225"/>
+      </g>
+      <!-- rug marks: dense in the typical range, sparse elsewhere, one lone mark at x = 10 -->
+      <g stroke="#4c5d57" stroke-width="1.6" stroke-linecap="round">
+        <line x1="228" y1="230" x2="228" y2="221"/><line x1="236" y1="230" x2="236" y2="220"/><line x1="243" y1="230" x2="243" y2="222"/><line x1="250" y1="230" x2="250" y2="219"/><line x1="257" y1="230" x2="257" y2="221"/><line x1="263" y1="230" x2="263" y2="218"/><line x1="269" y1="230" x2="269" y2="221"/><line x1="275" y1="230" x2="275" y2="220"/><line x1="281" y1="230" x2="281" y2="222"/><line x1="287" y1="230" x2="287" y2="219"/><line x1="293" y1="230" x2="293" y2="221"/><line x1="299" y1="230" x2="299" y2="220"/><line x1="305" y1="230" x2="305" y2="222"/>
+        <line x1="120" y1="230" x2="120" y2="222"/><line x1="168" y1="230" x2="168" y2="222"/>
+      </g>
+      <line x1="560" y1="230" x2="560" y2="216" stroke="#26332f" stroke-width="2.4" stroke-linecap="round"/>
+      <!-- tick labels -->
+      <g font-size="11" fill="#71827b">
+        <text x="222" y="248" text-anchor="middle">−0.5</text><text x="266" y="248" text-anchor="middle">0</text><text x="310" y="248" text-anchor="middle">0.5</text><text x="560" y="248" text-anchor="middle" font-weight="700" fill="#26332f">10</text>
+        <text x="78" y="233" text-anchor="end">0</text><text x="78" y="134" text-anchor="end">0.5</text><text x="78" y="74" text-anchor="end">0.8</text><text x="78" y="54" text-anchor="end">0.9</text><text x="78" y="36" text-anchor="end">0.99</text><text x="78" y="24" text-anchor="end">1.0</text>
+      </g>
+      <text x="266" y="16" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0a5c53">Typical range — where the data live</text>
+      <text x="505" y="268" text-anchor="middle" font-size="11" fill="#71827b">one lone patient at x = 10</text>
+      <text x="330" y="288" text-anchor="middle" font-size="11.5" fill="#71827b">Covariate X</text>
+      <text x="22" y="130" text-anchor="middle" font-size="11.5" fill="#71827b" transform="rotate(-90 22 130)">Propensity π(x)</text>
+    </svg>
+  </div>
+  <h3>Step 3a: Trimming the tails</h3>
+  <p>Another option is to remove the subjects with extreme weights. This can be justified by making the positivity assumption more plausible — remember, at the extremes the propensity to receive treatment is almost deterministic, and we don't want that.</p>
+  <p>Let's first look at the distribution of propensity scores in the treated and control groups:</p>
+  <ul>
+    <li><strong>Treated patients</strong> naturally cluster toward the high end of the scale — they looked like prime candidates for the drug.</li>
+    <li><strong>Control patients</strong> naturally cluster toward the low end — they looked unlikely to be prescribed the drug.</li>
+  </ul>
+  <div class="chart-card">
+    <p class="ct">Propensity score distributions and the trimming cutoffs</p>
+    <p class="cs">Blue: control patients. Orange: treated patients. Green band: the overlap we keep. Grey tails: trimmed away.</p>
+    <svg viewBox="0 0 640 280" role="img" aria-label="Two overlapping propensity score distributions, control centered near 0.35 and treated near 0.65, with a green common support band from 0.15 to 0.75 and grey trimmed tails outside it">
+      <rect x="60" y="30" width="81" height="200" fill="#9aa5a0" opacity="0.18"/>
+      <rect x="465" y="30" width="135" height="200" fill="#9aa5a0" opacity="0.18"/>
+      <rect x="141" y="30" width="324" height="200" fill="#3d9970" opacity="0.13"/>
+      <path d="M141,230 C180,230 200,70 249,62 C298,70 318,230 357,230 Z" fill="#2b6cb0" opacity="0.55"/>
+      <path d="M303,230 C342,230 362,70 411,62 C460,70 480,230 519,230 Z" fill="#d95f26" opacity="0.55"/>
+      <line x1="141" y1="30" x2="141" y2="230" stroke="#5a6b64" stroke-width="1.6" stroke-dasharray="5 4"/>
+      <line x1="465" y1="30" x2="465" y2="230" stroke="#5a6b64" stroke-width="1.6" stroke-dasharray="5 4"/>
+      <line x1="60" y1="230" x2="600" y2="230" stroke="#c9bfa5" stroke-width="1.5"/>
+      <g font-size="11.5" fill="#71827b">
+        <text x="60" y="248">0</text><text x="141" y="248" text-anchor="middle" font-weight="700" fill="#26332f">0.15</text>
+        <text x="330" y="248" text-anchor="middle">0.5</text>
+        <text x="465" y="248" text-anchor="middle" font-weight="700" fill="#26332f">0.75</text>
+        <text x="592" y="248">1.0</text>
+        <text x="330" y="266" text-anchor="middle">Propensity score π</text>
+      </g>
+      <text x="249" y="48" text-anchor="middle" font-size="13" font-weight="800" fill="#2b6cb0">Control</text>
+      <text x="411" y="48" text-anchor="middle" font-size="13" font-weight="800" fill="#b34a1a">Treated</text>
+      <text x="303" y="205" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1e6b45">Common support — keep (0.15 to 0.75)</text>
+      <text x="100" y="120" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5a6b64" transform="rotate(-90 100 130)">trimmed</text>
+      <text x="532" y="120" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5a6b64" transform="rotate(-90 532 130)">trimmed</text>
+    </svg>
+  </div>
+  <p>A major problem arises at the extreme edges — the "tails" of these two distributions. Suppose you have treated patients with a 95% propensity score, and almost <em>zero</em> control patients ever score that high. That means there are no comparable untreated patients in that range. Furthermore, if one rare control outlier <em>does</em> exist up at 99%, their IPTW weight will be 1/(1 − 0.99) = 100 — meaning that single person will count as 100 people and make the causal estimate wildly unstable.</p>
+  <h4>1. Cut off treated patients who scored higher than almost all control patients (the upper cutoff)</h4>
+  <p><em>How it works:</em> Look <strong>only at your control group</strong> first and find where their scores top out — specifically, the 98th percentile. Suppose 98% of your control patients have a propensity score of <strong>0.75 or lower</strong> (only a tiny 2% of control outliers scored higher). That means 0.75 is the practical "ceiling" where control patients stop existing in meaningful numbers. Next, apply that 0.75 ceiling to your dataset and <strong>remove any treated patients (and the few control outliers) who scored above 0.75</strong>. Why? Because above 0.75, treated patients have no real control counterparts to be compared against.</p>
+  <h4>2. Cut off control patients who scored lower than almost all treated patients (the lower cutoff)</h4>
+  <p><em>How it works:</em> Now flip the process and look <strong>only at your treated group</strong> to find where their scores bottom out — specifically, the 2nd percentile. Suppose 98% of your treated patients have a propensity score of <strong>0.15 or higher</strong>, and only 2% scored below 0.15. That means 0.15 is the practical "floor" below which treated patients virtually disappear. Apply that 0.15 floor to your dataset and <strong>remove any control patients (and the few treated outliers) who scored below 0.15</strong>. Why? Because a control patient with a score of 0.02 is someone who would almost <em>never</em> be prescribed the drug in the real world, leaving nobody in the treated group down there to compare them to.</p>
+  <div class="callout teal">
+    <span class="label">What you're left with: the "Goldilocks" zone of overlap</span>
+    <p>Once you slice off the extreme right tail (where only treated patients exist) and the extreme left tail (where only control patients exist), you are left strictly with the <span class="term">[common support]</span> middle zone — in our example, patients scoring between 0.15 and 0.75. Trimming gives you two major wins, along with one important trade-off:</p>
+    <ol style="margin-bottom:0">
+      <li><strong>It protects the positivity assumption:</strong> every patient remaining had a genuine, realistic probability of landing in either group.</li>
+      <li><strong>It eliminates massive outlier weights:</strong> with the extreme tails gone, your weights stay well-behaved and your standard errors stay small.</li>
+      <li><strong>The trade-off — the target population shifts:</strong> by deleting patients at the extremes, you are no longer estimating the causal effect for the <em>entire</em> population. Your results now apply to the subpopulation in the middle — the patients for whom doctors didn't have an obvious, automatic choice and who could have reasonably gone either way. In medicine and data science, this is often the exact group we care about most.</li>
+    </ol>
+  </div>
+  <h3>Step 3b: Weight truncation (capping the weights)</h3>
+  <p>The other option — whether we trim the tails or not — is to simply cap (or truncate) the weights <span class="term">[weight truncation]</span> at a certain maximum value. Unlike trimming, we aren't dropping anyone from the dataset. Instead, we decide ahead of time on a maximum allowable weight:</p>
+  <ul>
+    <li><strong>Using a fixed value:</strong> for example, we can choose a weight of 100 as our hard cap. Any weight over that — whether it's 101, 200, 5,000, or 10,000 — simply gets replaced and capped at 100.</li>
+    <li><strong>Using percentiles:</strong> another way is through the distribution of the weights themselves. For example, cap the weights at the 98th or 99th percentile, and any weight above that threshold gets set to whatever the 98th or 99th percentile value is.</li>
+  </ul>
+  <p>The trade-off, in short:</p>
+  <ul>
+    <li><strong>Truncation:</strong> introduces some bias, but gives you a smaller variance (less noise).</li>
+    <li><strong>No truncation:</strong> unbiased (assuming your causal assumptions and propensity score model are correct), but can result in a much larger variance.</li>
+  </ul>
+  <p>When we truncate, we reduce the variance of our estimate because a single extreme observation can no longer dominate the sample. However, because we are manually altering the weights and no longer properly weighting that subpopulation to achieve perfect balance, we let a small amount of confounding slip back in — which introduces bias. Ultimately, this is a classic <span class="term">[bias–variance trade-off]</span>: the decision is whether a big decrease in variance is worth a small increase in bias.</p>
+  <div class="formula">
+    MSE = bias² + variance
+    <span class="fnote">Mean squared error <span class="term">[mean squared error]</span> is how we score the trade-off: total error = squared bias + variance.</span>
+  </div>
+  <p>Simulation studies have shown that when you only truncate a small number of extreme outlier weights (like at the 98th or 99th percentile), the massive drop in variance usually outweighs the tiny increase in bias, leading to a lower overall MSE and a much more reliable estimate. In practice, you should compare your truncated and untruncated estimates side by side as a sensitivity analysis <span class="term">[sensitivity analysis]</span>, to verify that your overall conclusion remains consistent while your confidence intervals tighten up.</p>
+</section>
+<div class="part-banner"><span class="tag">Part II</span><h2>Modeling using IPTW data</h2><span class="rule"></span></div>
+<!-- ================= 10 ================= -->
+<section id="msm">
+  <h2 class="sec"><span class="no">10</span>Intuition on marginal structural models</h2>
+  <h3>The big shift: potential outcomes vs. observed outcomes</h3>
+  <p>To understand a marginal structural model <span class="term">[marginal structural model]</span>, we first have to understand the difference between modeling <strong>observed</strong> outcomes versus <strong>potential</strong> outcomes:</p>
+  <ul>
+    <li>A regression model for <em>observed outcomes</em> looks at what <em>actually happened</em> in the messy real world. For example, imagine you are looking at hospital records for a severe heart procedure. A standard regression on observed data might show that patients who got the procedure had a higher rate of death. But that's deeply misleading! Doctors naturally reserved the procedure for the absolute sickest patients. Your model is just capturing the real-world fact that sick people die more often, not whether the procedure actually helped.</li>
+    <li>A regression model for <em>potential outcomes</em> (an MSM), by contrast, models what <em>would have happened</em> in parallel universes: <em>"What if we could magically force every single patient in the hospital to get the procedure?"</em> versus <em>"What if we forced no one to get it?"</em> Because those counterfactual worlds are invisible in raw data, we call this a "<strong>structural</strong>" model — it maps out the underlying cause-and-effect architecture rather than just recording biased real-world correlations.</li>
+  </ul>
+  <h3>Why is it called "marginal"?</h3>
+  <p>In standard statistics, when you want to control for a bunch of confounding variables (like age, blood pressure, and health history), you throw them all into your regression equation. That gives you a <em>conditional</em> effect <span class="term">[conditional effect]</span> — the effect of the drug <em>holding age and blood pressure strictly constant</em>.</p>
+  <p>An MSM is marginal because it doesn't force those background variables into the final regression equation. Thanks to our IPTW weights, all those background variables have already been balanced out behind the scenes. <em>Marginalizing</em> simply means this: because our weights have already smoothed out differences in things like age and blood pressure between groups, those factors don't need to clutter up our final equation. We can remove them from the regression model and zoom out to look at the big-picture, population-level relationship <span class="term">[marginal effect]</span> between the treatment and the outcome.</p>
+  <h3>Types of marginal structural models</h3>
+  <p>There are different types of marginal structural models, and I'll briefly outline some of the common ones below. Essentially, once we fit these models onto the pseudo-population, we can answer different questions about the treatment effect on potential outcomes — the model type is chosen by the <em>link function</em> <span class="term">[link function]</span>:</p>
+  <div class="table-card">
+    <p class="cap">Common marginal structural models<small>Same pseudo-population, three different questions</small></p>
+    <table>
+      <thead><tr><th>Model type</th><th>What it calculates</th><th>The question it answers</th><th>In plain English</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Linear MSM</strong> (identity link)</td><td>Average treatment effect</td><td>"What is the absolute difference in heart attack rates if everyone took the drug versus if no one did?"</td><td>Measures a flat, absolute change — e.g., "the drug prevents 3 heart attacks per 100 people across the population."</td></tr>
+        <tr><td><strong>Log-link MSM</strong> (log link)</td><td>Causal relative risk</td><td>"What is the ratio of heart attack risk if everyone took the drug versus if no one did?"</td><td>Measures a proportional scaling factor — e.g., "taking the drug scales your risk down to 70% of what it would have been."</td></tr>
+        <tr><td><strong>Logistic MSM</strong> (logit link)</td><td>Causal odds ratio</td><td>"How do the odds of a heart attack compare between a world where everyone takes the drug versus no one?"</td><td>Compares the odds of the event occurring under the two counterfactual worlds (commonly used in case-control or logistic regression workflows).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Linear MSM example</h3>
+  <p>As an example, let's walk through fitting a linear marginal structural model onto the pseudo-population. As we just said, the linear MSM basically helps us determine the average treatment effect. Previously, we saw how IPTW lets us calculate the ATE by taking the standard average in our treated pseudo-population (E[<span class="math">Y</span><sup>1</sup>]) minus the standard average in our control pseudo-population (E[<span class="math">Y</span><sup>0</sup>]). If we write out a simple linear MSM, it looks just like a standard regression equation, with one crucial difference:</p>
+  <div class="formula">
+    E[<span class="math">Y</span><sup><span class="math">a</span></sup>] = β<sub>0</sub> + β<sub>1</sub>·<span class="math">a</span>
+    <span class="fnote">Read <span class="math">Y</span><sup><span class="math">a</span></sup> as "the outcome if we <em>set</em> treatment to <span class="math">a</span> for everyone."</span>
+  </div>
+  <ul>
+    <li>If no one receives the drug (<span class="math">a</span> = 0), the expected potential outcome is β<sub>0</sub>.</li>
+    <li>If everyone receives the drug (<span class="math">a</span> = 1), the expected potential outcome is β<sub>0</sub> + β<sub>1</sub>.</li>
+    <li>Therefore, the slope β<sub>1</sub> is E[<span class="math">Y</span><sup>1</sup>] − E[<span class="math">Y</span><sup>0</sup>] — the exact average treatment effect we calculated earlier.</li>
+  </ul>
+  <h3>The catch: setting <span class="math">a</span> vs. conditioning on observed treatment <span class="math">A</span></h3>
+  <p>You may ask: why can't we just fit this model on our raw observational data using standard regression, E[<span class="math">Y</span> | <span class="math">A</span> = <span class="math">a</span>]? Because that formula answers an <em>associative</em> question: <em>"What was the average outcome among the subset of patients who actually received treatment versus the subset who did not?"</em> We can calculate this directly from raw observed data, because we know which group each patient ended up in and what happened to them — but because of confounding, those two groups aren't comparable (e.g., unhealthy patients received the drug and healthy patients did not).</p>
+  <p>In a marginal structural model, E[<span class="math">Y</span><sup><span class="math">a</span></sup>], the question is fundamentally different: <em>"What would the expected outcome be across <strong>all</strong> patients if everyone were given treatment, versus if no one were given treatment?"</em> In the real world, we are missing half of the data needed to answer this. For the observed treated group, we don't have data showing what their outcomes would have been had they gone untreated; for the control group, we don't have data showing what would have happened had they been treated.</p>
+  <p>IPTW gives us a methodology to bypass this missing-data problem: by weighting each group to represent the entire population, we construct a balanced pseudo-population that mimics those missing potential outcomes, allowing us to fit a standard regression model directly on the weighted data (the pseudo-population).</p>
+  <h3>The mechanics: fitting regression on the pseudo-population</h3>
+  <p>Here is where IPTW bridges the gap. Look back at how we built our pseudo-population in the 10-patient example:</p>
+  <ul>
+    <li>By weighting the 2 treated patients by 5, they now count as 10 treated patients standing in for the whole profile.</li>
+    <li>By weighting the 8 control patients by 1.25, they now count as 10 untreated patients standing in for the whole profile.</li>
+  </ul>
+  <p>In this weighted pseudo-population, both groups have been scaled up to represent the exact same 10-patient profile, completely erasing confounding. Because the weighted treatment group is now an exact mirror of the entire population (just like in a randomized controlled trial), we no longer have to worry about selection bias. Simply looking at the outcomes of the treated group inside our pseudo-population tells us what would happen if the entire population were given the drug — and looking at the weighted control group tells us what would happen if no one were given the drug. In practice, this means we can treat the weighted pseudo-population as if its observed outcomes are the potential outcomes.</p>
+  <p>Mathematically, when you run a standard generalized linear model <span class="term">[generalized linear model]</span> — like linear or logistic regression — the software estimates parameters by solving an equation that balances the weighted differences (residuals) between each patient's observed outcome <span class="math">Y</span> and the model's predicted average. To fit an MSM, we use the exact same regression machinery, but we multiply each patient's contribution by their IPTW weight <span class="math">W</span>:</p>
+  <div class="formula left">
+    Unweighted: &nbsp;Σ<sub><span class="math">i</span></sub> ( <span class="math">Y<sub>i</sub></span> − predicted<sub><span class="math">i</span></sub> ) · <span class="math">x<sub>i</sub></span> = 0<br/>
+    Weighted (MSM): &nbsp;Σ<sub><span class="math">i</span></sub> <span class="math">W<sub>i</sub></span> · ( <span class="math">Y<sub>i</sub></span> − predicted<sub><span class="math">i</span></sub> ) · <span class="math">x<sub>i</sub></span> = 0
+    <span class="fnote">This is a <span class="term">[weighted estimating equation]</span>: the only change from ordinary regression is that each person's residual counts <span class="math">W</span> times — once for themselves, and once for each person they're standing in for.</span>
+  </div>
+  <p>In our 10-patient example, the software gives each of the 2 treated patients 5 times the voice in the regression, and each of the 8 control patients 1.25 times the voice. Because the regression is now fitting directly to the unconfounded pseudo-population, the coefficients that come out of your standard regression software are no longer biased observational associations — they are the causal parameters of your marginal structural model.</p>
+  <h3>Testing subgroup effects (effect modification)</h3>
+  <p>Suppose you balanced 30 confounders using IPTW, and now you want to know if the drug works differently for patients with diabetes (<span class="math">V</span> = 1) versus without diabetes (<span class="math">V</span> = 0) <span class="term">[effect modification]</span>. Instead of wrestling with 30 covariates, you only include treatment <span class="math">a</span>, diabetes status <span class="math">V</span>, and their interaction in your weighted regression:</p>
+  <div class="formula">
+    E[<span class="math">Y</span><sup><span class="math">a</span></sup>] = β<sub>0</sub> + β<sub>1</sub><span class="math">a</span> + β<sub>2</sub><span class="math">V</span> + β<sub>3</sub><span class="math">aV</span>
+  </div>
+  <ul>
+    <li><strong>Causal effect for non-diabetics</strong> (treated minus untreated, <span class="math">V</span> = 0): (β<sub>0</sub> + β<sub>1</sub> + β<sub>2</sub>·0 + β<sub>3</sub>·0) − β<sub>0</sub> = <strong>β<sub>1</sub></strong>.</li>
+    <li><strong>Causal effect for diabetics</strong> (treated minus untreated, <span class="math">V</span> = 1): (β<sub>0</sub> + β<sub>1</sub> + β<sub>2</sub> + β<sub>3</sub>) − (β<sub>0</sub> + β<sub>2</sub>) = <strong>β<sub>1</sub> + β<sub>3</sub></strong>.</li>
+  </ul>
+  <p>…while keeping all other 29 confounders safely marginalized (averaged out) in the background.</p>
+  <h3>Adjusting the standard errors</h3>
+  <div class="callout amber">
+    <span class="label">Don't skip this step</span>
+    <p>Notice that in our 10-patient profile, weighting turned 2 treated patients and 8 control patients into 10 weighted treated patients and 10 weighted control patients (20 total "pseudo-patients"). Because weighting artificially inflates the apparent sample size, standard regression software will think you have more data than you really do, and output standard errors that are too small. Therefore, when fitting an MSM on weighted data, always pair your model with robust "sandwich" standard errors <span class="term">[robust sandwich standard errors]</span> or bootstrapping, so your confidence intervals reflect your true sample size.</p>
+  </div>
+</section>
+<!-- ================= 11 ================= -->
+<section id="two-model">
+  <h2 class="sec"><span class="no">11</span>The two-model workflow: propensity scores vs. marginal structural models</h2>
+  <p>One of the most common points of confusion when learning IPTW is that <strong>you end up running regression models at two entirely different stages of the analysis</strong>. Because both involve fitting a model, it's easy to mix them up. To keep them straight, remember that they have completely different jobs, inputs, and goals. Here is how to tell them apart:</p>
+  <div class="table-card">
+    <p class="cap">Two models, two completely different jobs</p>
+    <table>
+      <thead><tr><th>Feature</th><th>Model 1: the propensity score model</th><th>Model 2: the marginal structural model</th></tr></thead>
+      <tbody>
+        <tr><td><strong>What is its main job?</strong></td><td>To calculate the probability of treatment and build the weights.</td><td>To estimate the actual causal effect of the treatment on your outcome.</td></tr>
+        <tr><td><strong>What goes into the model?</strong></td><td>Your covariates (<span class="math">L</span>) predict the treatment (<span class="math">A</span>).</td><td>The treatment (<span class="math">A</span>) predicts the outcome (<span class="math">Y</span>) — fitted as a <em>weighted</em> regression, where the IPTW weights enter as regression weights, not as a predictor variable.</td></tr>
+        <tr><td><strong>Do you include your 30 confounders?</strong></td><td><strong>Yes.</strong> You throw all your background variables (age, blood pressure, history) into this model to figure out selection bias.</td><td><strong>No.</strong> The weights have already balanced out those confounders behind the scenes, keeping your final equation clean.</td></tr>
+        <tr><td><strong>What kind of model is it?</strong></td><td>Almost always a logistic regression (since treatment status is binary: 0 or 1).</td><td>A weighted regression chosen based on your outcome type (e.g., linear regression for continuous outcomes, logistic or log-link regression for binary outcomes like heart attacks).</td></tr>
+        <tr><td><strong>What comes out of it?</strong></td><td>A propensity score (π) for each patient, which becomes a weight (1/π or 1/(1 − π)).</td><td>A causal parameter — such as a causal relative risk, odds ratio, or mean difference.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Summary of the pipeline</h3>
+  <div class="steps">
+    <div class="step"><span class="n">Step 1</span><h4>Fit the propensity score model</h4><p>You use a logistic regression across your raw observational data to look at all the messy confounding factors and figure out who <em>tended</em> to get the drug. You turn those predictions into weights.</p></div>
+    <div class="step"><span class="n">Step 2</span><h4>Build the pseudo-population</h4><p>You multiply your patients by those weights, creating a balanced world where confounding is erased — and check balance (section 7) before going further.</p></div>
+    <div class="step"><span class="n">Step 3</span><h4>Fit the marginal structural model</h4><p>You run a standard regression (linear or logistic) directly on that weighted pseudo-population. Because the weights did the heavy lifting beforehand, the coefficient you get out is your true, unconfounded causal effect.</p></div>
+  </div>
+</section>
+<!-- ================= 12 ================= -->
+<section id="doubly-robust">
+  <h2 class="sec"><span class="no">12</span>Intuition on doubly robust estimators</h2>
+  <h3>Having two chances to be right</h3>
+  <p>Up to this point, we've seen how IPTW lets us estimate causal effects. By modeling the probability of receiving treatment (the propensity score) and weighting our patients accordingly, we create a balanced pseudo-population where we can calculate the expected outcome if everyone received the drug (E[<span class="math">Y</span><sup>1</sup>]), the expected outcome if no one received the drug (E[<span class="math">Y</span><sup>0</sup>]), and the difference between them — the average treatment effect.</p>
+  <p>There is just one lingering question with IPTW: <strong>what if our propensity score model is wrong?</strong> In the real world, we don't know the true mathematical formula that doctors used to prescribe the drug. If we accidentally miss an important interaction term or a non-linear relationship when building our propensity score model, our weights will be off, and our causal estimate will be biased.</p>
+  <p>Enter doubly robust estimators <span class="term">[doubly robust / augmented IPTW]</span> — also known as augmented inverse probability of treatment weighting (AIPTW). The main idea is simple: instead of relying entirely on a single model to remove confounding, we combine two different models into one formula, so that we only have to get <em>one</em> of them right to get an unbiased causal estimate.</p>
+  <h3>1. What are the two models trying to predict (and what data do they use)?</h3>
+  <p>Let's first distinguish between the overall goal of the estimator and the two individual models that feed into it. The overall goal, just like standard IPTW, is to calculate the population-level potential outcomes — specifically, the average outcome if the <em>entire population</em> took the drug (E[<span class="math">Y</span><sup>1</sup>]) versus if <em>no one</em> took the drug (E[<span class="math">Y</span><sup>0</sup>]). To get there, we train two completely separate models on our raw, unweighted observed data:</p>
+  <ul>
+    <li><strong>Model 1: the propensity score model, π(<span class="math">L</span>)</strong> (predicting <em>treatment</em> on observed data). You run this on your raw, unweighted dataset using all patients. It looks at a patient's observed baseline confounders (<span class="math">L</span> — like age, blood pressure, and medical history) and predicts the probability that they receive the drug. <em>How it estimates E[<span class="math">Y</span><sup>1</sup>] on its own (the IPTW path):</em> as we saw in our 10-patient covariate profile (where 2 patients took the drug and 8 didn't, giving π = 0.2), IPTW doesn't try to guess the missing outcomes for the 8 control patients one by one. Instead, we weight the 2 treated patients' observed outcomes up by 5, so they stand in for all 10 patients.</li>
+    <li><strong>Model 2: the outcome regression model, <span class="math">m</span><sub>1</sub>(<span class="math">L</span>)</strong> (predicting the <em>outcome</em> on observed data). Crucially, this model is also fit on your raw, unweighted observed data — <em>not</em> the weighted pseudo-population. Specifically, to model what happens under treatment, you filter your raw data to just the patients who actually took the drug (<span class="math">A</span> = 1) and fit a standard regression predicting their observed outcome <span class="math">Y</span> from their observed confounders <span class="math">L</span>: <span class="math">m</span><sub>1</sub>(<span class="math">L</span>) = E[<span class="math">Y</span> | <span class="math">A</span> = 1, <span class="math">L</span>]. <em>(Why don't we weight this model? Because if we used our IPTW weights to train the outcome model, and those weights were wrong, they would corrupt our outcome model too. Keeping it unweighted keeps the two models completely independent.)</em> Once trained on the observed treated patients, we apply this model to our entire dataset to predict what every patient's health outcome <em>would be</em> if they took the drug, based on their baseline characteristics <span class="math">L</span>. <em>How it estimates E[<span class="math">Y</span><sup>1</sup>] on its own (the outcome imputation path):</em> in our 10-patient profile, for the 2 treated patients we use their actual observed outcome; for the 8 control patients whose treated outcomes are missing, we plug in their predicted counterfactual outcome from our regression model, and then average all 10 patients together.</li>
+  </ul>
+  <p>Notice the symmetry: the IPTW path is unbiased if your propensity score model π(<span class="math">L</span>) is correct, while the outcome regression path is unbiased if your outcome model <span class="math">m</span><sub>1</sub>(<span class="math">L</span>) is correct.</p>
+  <h3>2. How AIPTW combines both models (the math &amp; intuition)</h3>
+  <p>A doubly robust estimator puts both models into a single equation. Let's look at how AIPTW estimates E[<span class="math">Y</span><sup>1</sup>] (the average outcome if everyone in our sample of <span class="math">n</span> patients took the drug):</p>
+  <div class="formula">
+    Ê[<span class="math">Y</span><sup>1</sup>] = <span class="frac"><span class="num">1</span><span class="den"><span class="math">n</span></span></span> Σ<sub><span class="math">i</span></sub> [ <span class="math">m</span><sub>1</sub>(<span class="math">L<sub>i</sub></span>) + <span class="frac"><span class="num"><span class="math">A<sub>i</sub></span>(<span class="math">Y<sub>i</sub></span> − <span class="math">m</span><sub>1</sub>(<span class="math">L<sub>i</sub></span>))</span><span class="den">π<sub><span class="math">i</span></sub></span></span> ]
+    <span class="fnote">In words: start with the outcome model's prediction for everyone, then add an IPTW-weighted correction using only the treated patients' prediction errors.</span>
+  </div>
+  <p>Here is what each variable means in plain English:</p>
+  <ul>
+    <li><span class="math">A<sub>i</sub></span>: whether patient <span class="math">i</span> actually took the drug (1 if treated, 0 if control).</li>
+    <li><span class="math">Y<sub>i</sub></span>: patient <span class="math">i</span>'s actual observed health outcome.</li>
+    <li>π<sub><span class="math">i</span></sub>: Model 1 — patient <span class="math">i</span>'s predicted probability of getting the drug (propensity score).</li>
+    <li><span class="math">m</span><sub>1</sub>(<span class="math">L<sub>i</sub></span>): Model 2 — patient <span class="math">i</span>'s predicted health outcome under treatment, from our unweighted outcome regression model.</li>
+  </ul>
+  <h3>3. Why you only need one model to be right</h3>
+  <p>The magic of this equation is easiest to see when we also write out its algebraically rearranged version:</p>
+  <div class="formula">
+    Ê[<span class="math">Y</span><sup>1</sup>] = <span class="frac"><span class="num">1</span><span class="den"><span class="math">n</span></span></span> Σ<sub><span class="math">i</span></sub> [ <span class="frac"><span class="num"><span class="math">A<sub>i</sub>Y<sub>i</sub></span></span><span class="den">π<sub><span class="math">i</span></sub></span></span> − <span class="frac"><span class="num">(<span class="math">A<sub>i</sub></span> − π<sub><span class="math">i</span></sub>)</span><span class="den">π<sub><span class="math">i</span></sub></span></span> · <span class="math">m</span><sub>1</sub>(<span class="math">L<sub>i</sub></span>) ]
+    <span class="fnote">Same estimator, rearranged: plain IPTW, minus a correction term. The two scenarios below are about which term does the saving — and the cancellations happen <em>in expectation</em> (on average, over repeated samples), not exactly in any single dataset.</span>
+  </div>
+  <p>Look at how this acts as a built-in safety net under two different scenarios:</p>
+  <ul>
+    <li><strong>Scenario A: your propensity score π is right, but your outcome model <span class="math">m</span><sub>1</sub> is wrong.</strong> Look at the first equation. In the correction term, the numerator involves (<span class="math">Y<sub>i</sub></span> − <span class="math">m</span><sub>1</sub>(<span class="math">L<sub>i</sub></span>)) averaged over treated patients, weighted by 1/π. In our 10-patient profile, where the true propensity score is 0.2, on average 2 out of 10 patients have <span class="math">A</span> = 1, so <span class="math">A</span>/π averages to 1 in expectation. That means the correction term, in expectation, simply adds back the average true outcome and removes the (wrong) outcome-model average — the bad outcome model cancels out <em>on average</em>, leaving us with our unbiased standard IPTW estimate.</li>
+    <li><strong>Scenario B: your outcome model <span class="math">m</span><sub>1</sub> is right, but your propensity score π is wrong.</strong> Now look at the rearranged equation, at the residual term in the numerator: (<span class="math">Y<sub>i</sub></span> − <span class="math">m</span><sub>1</sub>(<span class="math">L<sub>i</sub></span>)), the difference between a treated patient's actual outcome and what our outcome model predicted. If our outcome model is correctly specified, its predictions match the true average outcome, meaning the average prediction error across patients equals zero in expectation. That entire correction term vanishes <em>on average</em>, neutralizing the bad propensity score in the denominator and leaving us with our unbiased outcome regression estimate.</li>
+  </ul>
+  <p>In short: each model acts as an insurance policy for the other.</p>
+  <h3>4. When and why should you use doubly robust estimators?</h3>
+  <p>Beyond the peace of mind of getting "two chances to be right," there are three practical reasons why data scientists and clinical researchers increasingly prefer AIPTW over standard IPTW:</p>
+  <ol>
+    <li><strong>Insurance against model misspecification</strong> <span class="term">[model misspecification]</span>: in complex healthcare or user-behavior data, sometimes it is much easier to model how doctors make prescribing decisions (π) than it is to model complex biological disease progression (<span class="math">m</span>) — or vice versa. Doubly robust estimation protects you as long as you capture at least one of those two mechanisms accurately.</li>
+    <li><strong>Smaller variance (higher efficiency)</strong> <span class="term">[efficiency]</span>: even when your propensity score model is 100% correct, semiparametric theory shows that AIPTW is more statistically efficient than standard IPTW when <em>both</em> models are correct. By anchoring the estimate with outcome predictions, AIPTW produces tighter confidence intervals and smaller standard errors than weighting alone.</li>
+    <li><strong>The gateway to modern machine learning causal inference:</strong> because AIPTW separates treatment prediction (π) and outcome prediction (<span class="math">m</span>) into two unweighted models on observed data whose errors multiply together, it forms the foundation for modern machine learning causal methods, like double/debiased machine learning <span class="term">[double machine learning]</span> and targeted maximum likelihood estimation <span class="term">[targeted maximum likelihood estimation]</span>.</li>
+  </ol>
+  <div class="callout amber">
+    <span class="label">One honest limit</span>
+    <p>"Doubly robust" does <strong>not</strong> protect against unmeasured confounding. Both models still rely on the exchangeability assumption — that you measured all the necessary confounders <span class="math">L</span> in the first place. Two chances to be right about the <em>models</em>; no extra chances about the <em>data</em>.</p>
+  </div>
+</section>
+<!-- ================= 13 ================= -->
+<section id="time-varying">
+  <h2 class="sec"><span class="no">13</span>Worked example of time-varying analysis with IPTW</h2>
+  <p>Let's start with a group of 200 patients who all share the same baseline covariate profile — let's call it "overall health" (<span class="math">X</span>). Over a 2-year period, we want to understand if patients who take a drug for 2 years straight have a lower myocardial infarction rate at year 2 than patients who do not take the drug in either year. The drug is potentially administered at time 0 and again at year 1, with the outcome measured at year 2. At time 0, some of these patients with the same initial health profile receive the drug (the treatment group) and others do not (the control group).</p>
+  <p>One year later, at year 1, the doctor reassesses each subject's covariate profile before deciding whether to prescribe the drug for the second year. Even though everyone started with the same health profile at time 0, their covariate profiles have now shifted over time — both due to the time-0 drug and due to natural factors. For example, most of the patients who took the drug at time 0 may have gotten healthier, while most of the patients who did not take the drug at time 0 may have gotten sicker.</p>
+  <h3>Why can't we use matching at year 1?</h3>
+  <p>Look at what happens if we match on health profiles at year 1. First, matching at year 1 changes our question to: <em>"What is the isolated effect of receiving the drug at year 1 on myocardial infarction rates at year 2?"</em> — which completely ignores the benefit the drug already produced during year 0. For instance, at year 1 we would match the healthy profiles of patients who took the drug at time 0 with the healthy profiles of patients in the control group who didn't take the drug. But this completely ignores the fact that the healthy profiles in the treatment group are <em>newly</em> healthy, and the healthy profiles in the control group are likely outliers, because they stayed healthy without the drug. Matching across groups at year 1 completely erases this historical information. (Furthermore, since those healthy subjects in the control group are likely rare outliers, we'd likely be throwing out a lot of information with matching.)</p>
+  <p>Now look at what happens when we use IPTW instead. Weighting preserves the patients' history at year 1 by scaling subjects within their own trajectory rather than matching across groups. In the treatment group, we look at the subjects who took the drug at both time 0 and year 1, and we weight them accordingly to stand in for the subjects who started in the treatment group at time 0 but dropped off the drug at year 1. We do the exact same thing in the control group: at year 1, we take the subjects who remained untreated in both years and weight them accordingly to stand in for the subjects who started in the control group at time 0 but dropped off the control trajectory because they were prescribed the drug at year 1.</p>
+  <p>By weighting this way, we preserve the historical covariate profile shift from time 0 to year 1 and reconstruct a pseudo-population of our original time-0 treatment and control groups — allowing us to fairly compare the myocardial infarction rates of taking the drug for 2 full years versus not taking the drug in either year.</p>
+  <p>Here is the diagram with toy numbers to illustrate the point and give mathematical intuition:</p>
+  <figure>
+    <img src="longitudinal-diagram.jpg" alt="Longitudinal IPTW tree diagram: 200 patients split at time 0 into 140 drug and 60 no drug; each branch splits by year-1 health (healthy or sick) and year-1 treatment, with the always-treated paths totaling 200 pseudo-patients and the never-treated paths totaling 200 pseudo-patients" />
+    <figcaption>The full two-year tree. Only the paths that stayed the course — always treated, or never treated — get weighted up; each one ends up representing all 200 original patients. ("Dropped" paths are the patients who switched, and whom the stayers stand in for.)</figcaption>
+  </figure>
+  <h3>Step 1: Time 0 weights (<span class="math">W</span><sub>0</sub>)</h3>
+  <p>You start with <strong>200 patients</strong> sharing the exact same baseline profile (<span class="math">X</span>):</p>
+  <ul>
+    <li><strong>Drug at time 0 (140 patients):</strong> probability of receiving the drug π<sub>0</sub> = 140/200 = 0.7. Time 0 weight <span class="math">W</span><sub>0</sub> = 1/0.7 = 10/7 ≈ 1.43. <em>Check:</em> 140 × 10/7 = <strong>200 weighted patients</strong>.</li>
+    <li><strong>No drug at time 0 (60 patients):</strong> probability of receiving no drug = 60/200 = 0.3. Time 0 weight <span class="math">W</span><sub>0</sub> = 1/0.3 = 10/3 ≈ 3.33. <em>Check:</em> 60 × 10/3 = <strong>200 weighted patients</strong>.</li>
+  </ul>
+  <h3>Step 2: Year 1 weights (<span class="math">W</span><sub>1</sub>) — branch by branch</h3>
+  <p>At year 1, doctors look at whether a patient is <strong>healthy</strong> or <strong>sick</strong> and decide whether to prescribe the drug for year 1. The year-1 health split: of the 140 who took the drug at time 0, 112 are healthy (80%) and 28 are sick (20%); of the 60 who didn't, 12 are healthy (20%) and 48 are sick (80%). Look at the pattern in the four branches:</p>
+  <ul>
+    <li>Whenever a patient is <strong>healthy at year 1</strong> (the branch of 112, or the branch of 12), only <strong>25% get the drug</strong> (28 of 112, and 3 of 12) and <strong>75% get no drug</strong> (84 of 112, and 9 of 12).</li>
+    <li>Whenever a patient is <strong>sick at year 1</strong> (the branch of 28, or the branch of 48), <strong>75% get the drug</strong> (21 of 28, and 36 of 48) and <strong>25% get no drug</strong> (7 of 28, and 12 of 48).</li>
+  </ul>
+  <p>Because we want to compare <strong>"always treated" (drug in both years)</strong> against <strong>"never treated" (no drug in both years)</strong> <span class="term">[treatment strategies]</span>, let's trace the 4 groups of patients who stayed the course and see who they are standing in for:</p>
+  <h4>A. The "always treated" branches (drug at time 0 → drug at year 1)</h4>
+  <ol>
+    <li><strong>Top branch (drug → healthy → drug): 28 patients.</strong> Out of the 112 healthy patients here, only 28 stayed on the drug while 84 dropped off. Probability of continuing the drug given healthy: 28/112 = 0.25. Year 1 weight <span class="math">W</span><sub>1</sub> = 1/0.25 = 4. <em>Intuition:</em> each of these 28 patients is weighted by 4 at year 1, so 28 × 4 = 112 — standing in for themselves <em>plus</em> the 84 healthy patients who stopped taking the drug.</li>
+    <li><strong>Second branch (drug → sick → drug): 21 patients.</strong> Out of the 28 sick patients here, 21 stayed on the drug while 7 dropped off. Probability of continuing the drug given sick: 21/28 = 0.75. Year 1 weight <span class="math">W</span><sub>1</sub> = 1/0.75 = 4/3 ≈ 1.33. <em>Intuition:</em> each of these 21 patients is weighted by 4/3 at year 1, so 21 × 4/3 = 28 — standing in for themselves <em>plus</em> the 7 sick patients who stopped taking the drug.</li>
+  </ol>
+  <h4>B. The "never treated" branches (no drug at time 0 → no drug at year 1)</h4>
+  <ol start="3">
+    <li><strong>Third branch (no drug → healthy → no drug): 9 patients.</strong> Out of the 12 healthy patients here, 9 stayed off the drug while 3 started taking it. Probability of staying off the drug given healthy: 9/12 = 0.75. Year 1 weight <span class="math">W</span><sub>1</sub> = 1/0.75 = 4/3 ≈ 1.33. <em>Intuition:</em> each of these 9 patients is weighted by 4/3, so 9 × 4/3 = 12 — standing in for all 12 healthy control patients.</li>
+    <li><strong>Bottom branch (no drug → sick → no drug): 12 patients.</strong> Out of the 48 sick patients here, 12 stayed off the drug while 36 started taking it. Probability of staying off the drug given sick: 12/48 = 0.25. Year 1 weight <span class="math">W</span><sub>1</sub> = 1/0.25 = 4. <em>Intuition:</em> each of these 12 patients is weighted by 4, so 12 × 4 = 48 — standing in for all 48 sick control patients.</li>
+  </ol>
+  <h3>Step 3: Total final weights (<span class="math">W</span><sub>0</sub> × <span class="math">W</span><sub>1</sub>) and how to apply them</h3>
+  <p>In longitudinal IPTW <span class="term">[longitudinal IPTW]</span>, a patient's final weight is simply the <strong>product of their weights at each time point</strong> (<span class="math">W</span><sub>total</sub> = <span class="math">W</span><sub>0</sub> × <span class="math">W</span><sub>1</sub>). Look at how cleanly the numbers multiply out, so that both groups represent all <strong>200 original patients</strong>:</p>
+  <div class="table-card">
+    <p class="cap">Final weights for the patients who stayed the course<small>Everyone else switched at year 1 — these are the patients who stand in for them</small></p>
+    <table>
+      <thead><tr><th>Subgroup path</th><th class="num">Observed patients, n</th><th class="num">Time 0 weight</th><th class="num">Year 1 weight</th><th class="num">Total weight</th><th class="num">Weighted pseudo-patients</th></tr></thead>
+      <tbody>
+        <tr><td>Always treated (healthy at year 1)</td><td class="num">28</td><td class="num">10/7</td><td class="num">4</td><td class="num">40/7 ≈ 5.71</td><td class="num">28 × 40/7 = 160</td></tr>
+        <tr><td>Always treated (sick at year 1)</td><td class="num">21</td><td class="num">10/7</td><td class="num">4/3</td><td class="num">40/21 ≈ 1.90</td><td class="num">21 × 40/21 = 40</td></tr>
+        <tr class="total"><td>Total "always treated"</td><td class="num">49</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">200</td></tr>
+        <tr><td>Never treated (healthy at year 1)</td><td class="num">9</td><td class="num">10/3</td><td class="num">4/3</td><td class="num">40/9 ≈ 4.44</td><td class="num">9 × 40/9 = 40</td></tr>
+        <tr><td>Never treated (sick at year 1)</td><td class="num">12</td><td class="num">10/3</td><td class="num">4</td><td class="num">40/3 ≈ 13.33</td><td class="num">12 × 40/3 = 160</td></tr>
+        <tr class="total"><td>Total "never treated"</td><td class="num">21</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">200</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Every single group adds back up to 200:</strong></p>
+  <ul>
+    <li>For the <strong>always treated</strong> group: 28 healthy patients × 40/7 = 160 pseudo-patients (exactly 80% of 200, matching the 80% who got healthy after taking the drug at time 0), plus 21 sick patients × 40/21 = 40 pseudo-patients (the 20% who were sick after taking the drug at time 0). Total = <strong>200 always-treated pseudo-patients</strong>.</li>
+    <li>For the <strong>never treated</strong> group: 9 healthy patients × 40/9 = 40 pseudo-patients (exactly 20% of 200, matching the 20% who got healthy without the drug at time 0), plus 12 sick patients × 40/3 = 160 pseudo-patients (the 80% who got sick without the drug). Total = <strong>200 never-treated pseudo-patients</strong>.</li>
+  </ul>
+  <h3>Putting it all together: from longitudinal weights to causal estimates</h3>
+  <p>The beauty of longitudinal IPTW is that all the heavy lifting happens during this weight-calculation step. Once you multiply the weights across each time period to get a single final weight for each patient (<span class="math">W</span><sub>total</sub>), the rest of your outcome analysis is 100% identical to the single-time-point workflow we covered earlier:</p>
+  <ul>
+    <li><strong>Calculating potential outcomes &amp; the ATE:</strong> applying each patient's total weight creates our unconfounded pseudo-populations — 200 "always treated" pseudo-patients and 200 "never treated" pseudo-patients. From here, you simply take the standard average outcome in the "always treated" pseudo-population (E[<span class="math">Y</span><sup>always treated</sup>]) minus the standard average outcome in the "never treated" pseudo-population (E[<span class="math">Y</span><sup>never treated</sup>]) to get your average treatment effect.</li>
+    <li><strong>Fitting marginal structural models:</strong> just as before, you can pass your observed outcomes, treatment history, and final weights (weights = <span class="math">W</span><sub>total</sub>) directly into standard regression software — paired with robust "sandwich" standard errors or bootstrapping — to estimate causal odds ratios, relative risks, or cumulative dose effects over time.</li>
+  </ul>
+  <div class="callout teal">
+    <span class="label">The takeaway</span>
+    <p>Accounting for multiple time periods and time-varying confounders only changes <em>how we build the weights</em>. Once every patient has their final weight, you analyze the weighted pseudo-population the exact same way. That's the whole playbook: <strong>model who gets treated → build weights → check balance → handle the extremes → run a weighted regression → report a causal effect.</strong></p>
+  </div>
+</section>
+<footer>
+  <p><strong>Inverse Probability of Treatment Weighting (IPTW): The Practitioner's Playbook</strong> · Daniel Jordan Viray · November 18, 2026</p>
+  <p>Part of the Applied Data Science Lab — practical, first-principles playbooks for causal inference and applied statistics. Worked examples use small toy numbers on purpose: if you can check the arithmetic by hand, you understand the method.</p>
+</footer>
+</div>
+<script>
+(function(){
+  // Weight explorer
+  var slider = document.getElementById('pi-slider');
+  var read = document.getElementById('pi-read');
+  var wt = document.getElementById('w-treated');
+  var wc = document.getElementById('w-control');
+  var wtn = document.getElementById('w-treated-note');
+  var wcn = document.getElementById('w-control-note');
+  var warn = document.getElementById('ex-warn');
+  function fmt(x){ return x >= 100 ? x.toFixed(0) : (x >= 10 ? x.toFixed(1) : x.toFixed(2)); }
+  function update(){
+    var pi = slider.value / 100;
+    read.textContent = pi.toFixed(2);
+    var a = 1/pi, b = 1/(1-pi);
+    wt.textContent = fmt(a);
+    wc.textContent = fmt(b);
+    wtn.textContent = 'Each treated person counts as ' + fmt(a) + ' people in the pseudo-population.';
+    wcn.textContent = 'Each control person counts as ' + fmt(b) + ' people in the pseudo-population.';
+    if (pi <= 0.05) {
+      warn.textContent = 'π = ' + pi.toFixed(2) + ': a treated patient here is very unusual — and carries weight ' + fmt(a) + '. One person, ' + fmt(a) + ' votes. This is the extreme-weights problem from section 9.';
+    } else if (pi >= 0.95) {
+      warn.textContent = 'π = ' + pi.toFixed(2) + ': a control patient here is very unusual — and carries weight ' + fmt(b) + '. One person, ' + fmt(b) + ' votes. This is the extreme-weights problem from section 9.';
+    } else if (Math.abs(pi - 0.2) < 0.005) {
+      warn.textContent = 'At π = 0.20 this is our 10-patient profile from section 5: 2 treated × 5 = 10, and 8 controls × 1.25 = 10. Balanced.';
+    } else if (Math.abs(pi - 0.5) < 0.005) {
+      warn.textContent = 'π = 0.50 is the randomized-trial case: everyone weighs exactly 2, and weighting changes nothing — there was no confounding by this covariate to remove.';
+    } else {
+      warn.textContent = 'Notice the asymmetry: the rarer group (given this π) always gets the bigger weight. That is the whole mechanism — unusual patients count for more, because they stand in for the similar patients who got the other treatment.';
+    }
+  }
+  slider.addEventListener('input', update);
+  update();
+  // Love plot toggle
+  var before = document.getElementById('love-before');
+  var after = document.getElementById('love-after');
+  var btns = document.querySelectorAll('.seg button[data-view]');
+  btns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      btns.forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+      btn.setAttribute('aria-pressed','true');
+      var v = btn.getAttribute('data-view');
+      before.style.display = (v === 'after') ? 'none' : '';
+      after.style.display = (v === 'before') ? 'none' : '';
+      document.getElementById('love-lines').style.display = (v === 'both') ? '' : 'none';
+    });
+  });
+})();
+</script>
+</body>
+</html>
